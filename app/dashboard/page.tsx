@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
   User, 
@@ -17,27 +16,18 @@ import {
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Dashboard() {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const { user, isLoading } = useAuth();
 
   useEffect(() => {
-    const checkUser = () => {
-      const stored = localStorage.getItem('mathspace_user');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setUser(parsed);
-      } else {
-        window.location.href = '/login';
-      }
-    };
+    if (!isLoading && !user) {
+      window.location.href = '/login';
+    }
+  }, [isLoading, user]);
 
-    const timer = setTimeout(checkUser, 0);
-    return () => clearTimeout(timer);
-  }, [router]);
-
-  if (!user) {
+  if (isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>

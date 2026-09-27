@@ -17,6 +17,7 @@ import {
   Loader2,
   AlertCircle
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -78,25 +79,37 @@ export default function RegisterPage() {
 
     setIsLoading(true);
 
-    // TODO: Ganti dengan Supabase signUp saat backend siap
+    const supabase = createClient();
+    const { data, error } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      options: {
+        data: {
+          name: formData.fullName,
+          angkatan: formData.year,
+          jurusan: formData.department,
+        },
+      },
+    });
+
+    setIsLoading(false);
+
+    if (error) {
+      setErrors({ email: error.message });
+      return;
+    }
+
+    if (!data.session) {
+      // Project has "Confirm email" enabled: no session until the user
+      // clicks the link in their inbox, so we cannot redirect them yet.
+      setSuccessMessage('Akun berhasil dibuat! Cek email kamu untuk konfirmasi sebelum masuk.');
+      return;
+    }
+
+    setSuccessMessage('Akun berhasil dibuat! Mengalihkan...');
     setTimeout(() => {
-      setIsLoading(false);
-      const userData = {
-        id: '1',
-        name: formData.fullName,
-        email: formData.email,
-        role: 'user',
-        status: 'unverified',
-        angkatan: formData.year,
-        jurusan: formData.department
-      };
-      localStorage.setItem('mathspace_user', JSON.stringify(userData));
-      setSuccessMessage('Akun berhasil dibuat! Mengalihkan...');
-      
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 2000);
-    }, 1500);
+      window.location.href = '/dashboard';
+    }, 2000);
   };
 
   return (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, ArrowRight, Star, Clock, User, FileText, Calculator, Sigma, Lock, X, Sparkles } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -8,32 +8,18 @@ import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getContents, Content } from '@/lib/contentStore';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Home() {
   const router = useRouter();
+  const { isLoggedIn, user } = useAuth();
+  const userStatus: 'free' | 'premium' = user?.status === 'premium' ? 'premium' : 'free';
   const [searchQuery, setSearchQuery] = useState('');
-  const [allContents, setAllContents] = useState<Content[]>([]);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userStatus, setUserStatus] = useState<'free' | 'premium'>('free');
+  const [allContents] = useState<Content[]>(() =>
+    getContents().filter(c => c.status === 'aktif'),
+  );
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [modalType, setModalType] = useState<'login' | 'premium'>('premium');
-
-  useEffect(() => {
-    const loadData = () => {
-      setAllContents(getContents().filter(c => c.status === 'aktif'));
-      
-      const storedUser = localStorage.getItem('mathspace_user');
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        setUserStatus(user.status || 'free');
-        setIsLoggedIn(true);
-      } else {
-        setIsLoggedIn(false);
-        setUserStatus('free');
-      }
-    };
-    loadData();
-  }, []);
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();

@@ -8,13 +8,9 @@ import {
   Maximize2, ZoomIn, ZoomOut, RotateCcw 
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import { GoogleGenAI } from "@google/genai";
 import { useParams, useRouter } from 'next/navigation';
 import { getContentById, Document } from '@/lib/contentStore';
 import Link from 'next/link';
-
-// Initialize Gemini
-const genAI = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY || '' });
 
 export default function DocumentView() {
   const params = useParams();
@@ -51,16 +47,16 @@ export default function DocumentView() {
     setIsLoading(true);
 
     try {
-      const model = "gemini-3-flash-preview";
-      const response = await genAI.models.generateContent({
-        model,
-        contents: [
-          { role: 'user', parts: [{ text: `Context: You are a math assistant for MathSpace. You are helping a student with the document: ${doc?.title}. Question: ${userMessage}` }] }
-        ],
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: userMessage, documentTitle: doc?.title }),
       });
 
-      const aiResponse = response.text || "Maaf, saya tidak dapat memproses permintaan tersebut.";
-      setMessages(prev => [...prev, { role: 'ai', content: aiResponse }]);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Request failed');
+
+      setMessages(prev => [...prev, { role: 'ai', content: data.answer }]);
     } catch (error) {
       console.error("Gemini Error:", error);
       setMessages(prev => [...prev, { role: 'ai', content: "Maaf, saya mengalami kesalahan. Silakan periksa kunci API Anda atau coba lagi nanti." }]);

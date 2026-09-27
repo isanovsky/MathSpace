@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Loader2
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -53,27 +54,23 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
 
-    // TODO: Ganti dengan Supabase auth saat backend siap
-    setTimeout(() => {
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
       setIsLoading(false);
-      const isAdmin = email.toLowerCase().includes('admin');
-      const userData = {
-        id: '1',
-        name: isAdmin ? 'Administrator' : 'Mahasiswa ITS',
-        email: email,
-        role: isAdmin ? 'admin' : 'user',
-        status: 'premium',
-        angkatan: '2023',
-        jurusan: 'Matematika'
-      };
-      localStorage.setItem('mathspace_user', JSON.stringify(userData));
-      
-      if (isAdmin) {
-        window.location.href = '/admin';
-      } else {
-        window.location.href = '/dashboard';
-      }
-    }, 1500);
+      setError('Email atau password salah.');
+      return;
+    }
+
+    const res = await fetch('/api/me');
+    const { profile } = await res.json();
+
+    setIsLoading(false);
+    window.location.href = profile?.role === 'admin' ? '/admin' : '/dashboard';
   };
 
   return (

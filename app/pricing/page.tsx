@@ -6,26 +6,21 @@ import { CheckCircle2, XCircle, Upload, Copy, ArrowRight, ShieldCheck, Star, Spa
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Pricing() {
   const router = useRouter();
+  const { user: currentUser } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [senderName, setSenderName] = useState('');
 
   useEffect(() => {
-    const stored = localStorage.getItem('mathspace_user');
-    const user = stored ? JSON.parse(stored) : null;
-    
-    // Wrap in setTimeout to avoid synchronous setState in effect (satisfies lint)
-    setTimeout(() => {
-      setCurrentUser(user);
-      if (user) {
-        setSenderName(user.name || '');
-      }
-    }, 0);
-  }, []);
+    if (currentUser) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSenderName(currentUser.name || '');
+    }
+  }, [currentUser]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -37,6 +32,10 @@ export default function Pricing() {
     navigator.clipboard.writeText(text);
   };
 
+  // TODO(step 7): masih simulasi ke localStorage. Setelah payment_queue
+  // dimigrasikan ke Supabase, ini harus jadi POST ke Route Handler yang
+  // menyisipkan baris dengan user_id = currentUser.id, dan status di
+  // profiles hanya boleh berubah lewat approval admin di server, bukan dari sini.
   const handleSubmitPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile || !currentUser) return;
@@ -49,7 +48,6 @@ export default function Pricing() {
       const user = JSON.parse(localStorage.getItem('mathspace_user') || '{}');
       user.status = 'pending';
       localStorage.setItem('mathspace_user', JSON.stringify(user));
-      setCurrentUser(user);
 
       // Add submission to payment queue
       const queue = JSON.parse(localStorage.getItem('mathspace_queue') || '[]');

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 export interface AuthUser {
   id: string;
@@ -14,55 +14,39 @@ export interface AuthUser {
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('mathspace_user');
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch (e) {
-          console.error('Failed to parse stored user', e);
-          localStorage.removeItem('mathspace_user');
-        }
-      }
-    }
-    return null;
-  });
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
 
-  // Handle storage changes across tabs
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const stored = localStorage.getItem('mathspace_user');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setUser(parsed);
-        } catch (e) {
-          console.error('Corrupted user data detected in localStorage', e);
-          localStorage.removeItem('mathspace_user');
-          setUser(null);
-        }
+  const loadProfile = useCallback(async () => {
+    try {
+      const res = await fetch('/api/me');
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.profile);
       } else {
         setUser(null);
       }
+    } catch {
+      setUser(null);
+    } finally {
       setIsLoading(false);
-    };
-
-    // Initial check
-    handleStorageChange();
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-  const login = useCallback((userData: AuthUser) => {
-    localStorage.setItem('mathspace_user', JSON.stringify(userData));
-    setUser(userData);
+    }
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('mathspace_user');
+  useEffect(() => {
+    const supabase = createClient();
+    // onAuthStateChange fires once immediately with the current session
+    // (INITIAL_SESSION), so this alone also covers the initial load.
+    const { data: listener } = supabase.auth.onAuthStateChange(() => {
+      loadProfile();
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, [loadProfile]);
+
+  const logout = useCallback(async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
     setUser(null);
     window.location.href = '/';
   }, []);
@@ -74,7 +58,7 @@ export function useAuth() {
     isAdmin: user?.role === 'admin',
     isPremium: user?.status === 'premium',
     isPending: user?.status === 'pending',
-    login,
+    refresh: loadProfile,
     logout,
   };
 }

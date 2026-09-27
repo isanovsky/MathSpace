@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   User, 
@@ -20,14 +19,24 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const { user, isLoading: authLoading, refresh } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [payments, setPayments] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  
+  // TODO(step 7): masih baca dari localStorage sampai payment_queue
+  // dimigrasikan ke Supabase.
+  const [payments] = useState<any[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const storedPayments = localStorage.getItem('mathspace_payments');
+      return storedPayments ? JSON.parse(storedPayments) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
   const [editForm, setEditForm] = useState({
     name: '',
     jurusan: '',
@@ -41,63 +50,54 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    const stored = localStorage.getItem('mathspace_user');
-    if (!stored) {
-      window.location.href = '/login';
-      return;
-    }
-
-    const storedPayments = localStorage.getItem('mathspace_payments');
-    let parsedPayments = [];
-    if (storedPayments) {
-      try {
-        parsedPayments = JSON.parse(storedPayments);
-      } catch (e) {
-        parsedPayments = [];
-      }
-    }
-
-    try {
-      const parsedUser = JSON.parse(stored);
-      setTimeout(() => {
-        setUser(parsedUser);
-        setEditForm({
-          name: parsedUser.name || '',
-          jurusan: parsedUser.jurusan || '',
-          angkatan: parsedUser.angkatan || '2023'
-        });
-        setPayments(parsedPayments);
-        setIsLoading(false);
-      }, 0);
-    } catch (e) {
+    if (authLoading) return;
+    if (!user) {
       window.location.href = '/login';
     }
-  }, [router]);
+  }, [authLoading, user]);
+
+  const startEditing = () => {
+    if (!user) return;
+    setEditForm({
+      name: user.name || '',
+      jurusan: user.jurusan || '',
+      angkatan: user.angkatan || '2023'
+    });
+    setIsEditing(true);
+  };
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const updatedUser = {
-      ...user,
-      name: editForm.name,
-      jurusan: editForm.jurusan,
-      angkatan: editForm.angkatan
-    };
-    
-    localStorage.setItem('mathspace_user', JSON.stringify(updatedUser));
-    setUser(updatedUser);
-    setIsEditing(false);
-    showToast('Profil berhasil diperbarui');
-    
-    // Trigger storage event for other components
-    window.dispatchEvent(new Event('storage'));
+    setIsSaving(true);
+
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || 'Gagal memperbarui profil');
+      }
+
+      await refresh();
+      setIsEditing(false);
+      showToast('Profil berhasil diperbarui');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Gagal memperbarui profil', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  if (isLoading) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
         <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin"></div>
@@ -147,7 +147,7 @@ export default function ProfilePage() {
                   </div>
                   {!isEditing && (
                     <button 
-                      onClick={() => setIsEditing(true)}
+                      onClick={startEditing}
                       className="bg-surface-container-high text-navy px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-navy hover:text-white transition-all shadow-sm"
                     >
                       <Edit3 className="w-4 h-4" />
@@ -211,9 +211,10 @@ export default function ProfilePage() {
                         </button>
                         <button 
                           type="submit"
-                          className="bg-teal text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-teal/20 hover:opacity-90 transition-all text-sm"
+                          disabled={isSaving}
+                          className="bg-teal text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-teal/20 hover:opacity-90 transition-all text-sm disabled:opacity-50"
                         >
-                          Simpan Perubahan
+                          {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
                         </button>
                       </div>
                     </motion.form>

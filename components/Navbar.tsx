@@ -5,53 +5,20 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Search, User, Menu, X, LogOut, Settings, History, ChevronDown, LayoutDashboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Navbar() {
-  const [user, setUser] = useState<any>(null);
-  const [authReady, setAuthReady] = useState(false);
+  const { user, isLoading: authLoading, isLoggedIn, isAdmin, logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  
+
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
 
-  useEffect(() => {
-    const readAuth = () => {
-      const stored = localStorage.getItem('mathspace_user');
-      if (stored) {
-        try {
-          setUser(JSON.parse(stored));
-        } catch (e) {
-          console.error('Failed to parse user', e);
-          localStorage.removeItem('mathspace_user');
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-      setAuthReady(true);
-    };
-
-    readAuth();
-    // Listen for storage changes (handles cross-tab logout)
-    window.addEventListener('storage', readAuth);
-    return () => window.removeEventListener('storage', readAuth);
-  }, []);
-
   const handleLogout = () => {
     setIsLoggingOut(true);
-    // Clear all auth data
-    localStorage.removeItem('mathspace_user');
-    
-    // Force a full page reload to reset ALL component state
-    // Do NOT use router.push() — it causes stale state freeze
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 300);
+    logout();
   };
-
-  const isAdmin = user?.role === 'admin';
-  const isLoggedIn = !!user;
 
   // Close menus on route change
   useEffect(() => {
@@ -109,7 +76,7 @@ export default function Navbar() {
             <Search className="w-5 h-5 text-on-surface-variant" />
           </Link>
 
-          {!authReady ? (
+          {authLoading ? (
             <div className="w-8 h-8 rounded-full bg-surface-container animate-pulse"></div>
           ) : isLoggedIn ? (
             <div className="relative">
