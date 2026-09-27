@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --font-body: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+
+  --color-navy: #0F2340;
+  --color-navy-mid: #1E3A5F;
+  --color-brand: #2E75B6;
+  --color-teal: #0D7377;
+  --color-teal-light: #14FFEC;
+
+  --color-primary: var(--color-navy);
+  --color-primary-container: var(--color-navy-mid);
+  
+  --color-secondary: var(--color-teal);
+  --color-secondary-fixed-dim: var(--color-teal-light);
+
+  --color-surface: #F5F7FA;
+  --color-surface-container: #E2E8F0;
+  --color-surface-container-low: #F5F7FA;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-surface: #0F2340;
+  --color-on-surface-variant: #64748B;
+  
+  --color-outline: #E2E8F0;
+  --color-outline-variant: #E2E8F0;
+}
+
+@layer base {
+  * {
+    @apply border-outline-variant/20;
+  }
+}
+
+.math-pattern {
+  background-image: radial-gradient(var(--color-outline-variant) 0.5px, transparent 0.5px);
+  background-size: 24px 24px;
+  opacity: 0.15;
+}
+
+.glass-nav {
+  @apply backdrop-blur-xl bg-surface/70 border-b border-outline-variant/10;
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.5rem;
+}
