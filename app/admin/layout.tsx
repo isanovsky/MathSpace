@@ -9,40 +9,26 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const { user, isLoading, isAdmin } = useAuth();
 
   useEffect(() => {
-    const checkAdmin = () => {
-      const stored = localStorage.getItem('mathspace_user');
-      if (stored) {
-        try {
-          const user = JSON.parse(stored);
-          if (user.role === 'admin') {
-            setIsAdmin(true);
-          } else {
-            window.location.href = '/';
-          }
-        } catch (e) {
-          window.location.href = '/login';
-        }
-      } else {
-        window.location.href = '/login';
-      }
-    };
+    if (isLoading) return;
+    if (!user) {
+      window.location.href = '/login';
+    } else if (!isAdmin) {
+      window.location.href = '/';
+    }
+  }, [isLoading, user, isAdmin]);
 
-    const timer = setTimeout(checkAdmin, 0);
-    return () => clearTimeout(timer);
-  }, [router]);
-
-  if (isAdmin === null) {
+  if (isLoading || !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
