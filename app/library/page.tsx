@@ -62,7 +62,11 @@ function LibraryContent() {
       if (selectedSubfolderId) {
         matchesFolder = doc.folderId === selectedSubfolderId;
       } else if (selectedFolderId) {
-        matchesFolder = rootIdByFolder.get(doc.folderId) === selectedFolderId;
+        // Browsing a matkul shows only files placed directly in it (its
+        // subfolders appear as folder cards). A search looks inside all of it.
+        matchesFolder = searchQuery.trim()
+          ? rootIdByFolder.get(doc.folderId) === selectedFolderId
+          : doc.folderId === selectedFolderId;
       }
 
       const matchesCategory = !selectedCategory || doc.type === selectedCategory;
@@ -102,6 +106,16 @@ function LibraryContent() {
 
   const selectedFolder = useMemo(() => allFolders.find(f => f.id === selectedFolderId), [allFolders, selectedFolderId]);
   const selectedSubfolder = useMemo(() => allFolders.find(f => f.id === selectedSubfolderId), [allFolders, selectedSubfolderId]);
+
+  const subfoldersOfSelected = useMemo(
+    () => allFolders.filter(f => f.parentId === selectedFolderId),
+    [allFolders, selectedFolderId],
+  );
+  const showSubfolderCards =
+    !!selectedFolderId &&
+    !selectedSubfolderId &&
+    !searchQuery.trim() &&
+    subfoldersOfSelected.length > 0;
 
   return (
     <div className="min-h-screen bg-surface">
@@ -297,6 +311,38 @@ function LibraryContent() {
               </div>
             </div>
 
+            {/* Subfolders of the selected matkul */}
+            {showSubfolderCards && (
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+                  Subfolder
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {subfoldersOfSelected.map(sub => {
+                    const subDocCount = allContents.filter(c => c.folderId === sub.id).length;
+                    return (
+                      <button
+                        key={sub.id}
+                        onClick={() => setSelectedSubfolderId(sub.id)}
+                        className="flex items-center gap-4 bg-white rounded-2xl p-5 border border-outline-variant/10 hover:shadow-lg hover:-translate-y-0.5 transition-all text-left"
+                      >
+                        <Folder className="w-8 h-8 text-secondary shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-bold text-primary truncate">{sub.name}</p>
+                          <p className="text-xs text-on-surface-variant">{subDocCount} dokumen</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {filteredDocuments.length > 0 && (
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant pt-4">
+                    Dokumen
+                  </h3>
+                )}
+              </div>
+            )}
+
             {/* Documents Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredDocuments.map((doc) => {
@@ -370,7 +416,7 @@ function LibraryContent() {
               </div>
             )}
 
-            {!catalogLoading && !catalogError && filteredDocuments.length === 0 && (
+            {!catalogLoading && !catalogError && filteredDocuments.length === 0 && !showSubfolderCards && (
               <div className="text-center py-20 bg-surface-container-low rounded-3xl border-2 border-dashed border-outline-variant/20">
                 <FileText className="w-12 h-12 text-on-surface-variant/20 mx-auto mb-4" />
                 <p className="text-on-surface-variant font-medium">
