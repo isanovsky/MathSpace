@@ -3,7 +3,7 @@ import { Globe, Share2, Mail } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="w-full bg-surface-container-low py-16 px-8 border-t border-outline-variant/10">
+    <footer className="w-full bg-teal/10 py-16 px-8 border-t border-teal/15">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
         <div className="space-y-4">
           <span className="text-xl font-bold tracking-tighter text-secondary font-headline">MathSpace</span>
@@ -33,7 +33,6 @@ export default function Footer() {
             <p className="text-xs text-on-surface-variant mt-1">Surabaya, Jawa Timur 60111</p>
           </div>
           <p className="text-xs text-outline uppercase tracking-widest mt-8">
-            © 2026 Departemen Matematika ITS
           </p>
         </div>
       </div>

@@ -15,7 +15,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data: profile, error } = await admin
     .from('profiles')
-    .select('id, name, email, role, status, angkatan, jurusan')
+    .select('id, name, email, role, status, angkatan, jurusan, created_at')
     .eq('id', user.id)
     .single();
 
@@ -23,5 +23,6 @@ export async function GET() {
     return NextResponse.json({ profile: null }, { status: 404 });
   }
 
-  return NextResponse.json({ profile });
+  const { created_at, ...rest } = profile;
+  return NextResponse.json({ profile: { ...rest, createdAt: created_at } });
 }

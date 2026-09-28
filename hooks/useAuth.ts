@@ -11,6 +11,7 @@ export interface AuthUser {
   status: 'unverified' | 'pending' | 'premium';
   angkatan: string;
   jurusan: string;
+  createdAt: string;
 }
 
 export function useAuth() {
