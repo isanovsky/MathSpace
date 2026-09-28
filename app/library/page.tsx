@@ -6,15 +6,14 @@ import { Search, Filter, BookOpen, FileText, Lock, ChevronRight, ChevronDown, Fo
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getContents, Content } from '@/lib/contentStore';
-import { getFolders, Folder as FolderType } from '@/lib/folderStore';
+import type { CatalogDocument } from '@/lib/types/catalog';
 import { useAuth } from '@/hooks/useAuth';
+import { useCatalog } from '@/hooks/useCatalog';
 
 function LibraryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isLoggedIn, user } = useAuth();
-  const userStatus: 'free' | 'premium' = user?.status === 'premium' ? 'premium' : 'free';
+  const { isLoggedIn } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -24,10 +23,18 @@ function LibraryContent() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [modalType, setModalType] = useState<'login' | 'premium'>('premium');
   
-  const [allContents] = useState<Content[]>(() =>
-    getContents().filter(c => c.status === 'aktif'),
+  const { documents, folders: allFolders, isLoading: catalogLoading, error: catalogError } = useCatalog();
+  const allContents = useMemo(
+    () => documents.filter(d => d.status === 'aktif'),
+    [documents],
   );
-  const [allFolders] = useState<FolderType[]>(() => getFolders());
+
+  // folderId -> id of its top-level folder (matkul). Filtering by id instead of
+  // by name keeps two folders with the same name from being mixed up.
+  const rootIdByFolder = useMemo(
+    () => new Map(allFolders.map(f => [f.id, f.parentId ?? f.id])),
+    [allFolders],
+  );
 
   useEffect(() => {
     // Syncing the search box to the ?search= URL param when it changes via
@@ -55,24 +62,18 @@ function LibraryContent() {
       if (selectedSubfolderId) {
         matchesFolder = doc.folderId === selectedSubfolderId;
       } else if (selectedFolderId) {
-        const folder = allFolders.find(f => f.id === selectedFolderId);
-        matchesFolder = doc.subject === folder?.name;
+        matchesFolder = rootIdByFolder.get(doc.folderId) === selectedFolderId;
       }
 
       const matchesCategory = !selectedCategory || doc.type === selectedCategory;
       
       return matchesSearch && matchesFolder && matchesCategory;
     });
-  }, [allContents, searchQuery, selectedFolderId, selectedSubfolderId, selectedCategory, allFolders]);
+  }, [allContents, searchQuery, selectedFolderId, selectedSubfolderId, selectedCategory, rootIdByFolder]);
 
-  const handleAction = (doc: Content) => {
-    if (!isLoggedIn) {
-      setModalType('login');
-      setShowUpgradeModal(true);
-      return;
-    }
-    if (doc.isPremium && userStatus !== 'premium') {
-      setModalType('premium');
+  const handleAction = (doc: CatalogDocument) => {
+    if (!doc.canAccess) {
+      setModalType(isLoggedIn ? 'premium' : 'login');
       setShowUpgradeModal(true);
       return;
     }
@@ -131,7 +132,7 @@ function LibraryContent() {
                   </button>
                   
                   {rootFolders.map(folder => {
-                    const docCount = allContents.filter(c => c.subject === folder.name).length;
+                    const docCount = allContents.filter(c => rootIdByFolder.get(c.folderId) === folder.id).length;
                     const subfolders = allFolders.filter(f => f.parentId === folder.id);
                     const isExpanded = expandedFolders.has(folder.id);
                     const isSelected = selectedFolderId === folder.id && !selectedSubfolderId;
@@ -299,7 +300,7 @@ function LibraryContent() {
             {/* Documents Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredDocuments.map((doc) => {
-                const isLocked = !isLoggedIn || (doc.isPremium && userStatus !== 'premium');
+                const isLocked = !doc.canAccess;
                 const subfolder = allFolders.find(f => f.id === doc.folderId && f.parentId !== null);
                 
                 return (
@@ -357,7 +358,19 @@ function LibraryContent() {
               })}
             </div>
 
-            {filteredDocuments.length === 0 && (
+            {catalogLoading && (
+              <div className="flex justify-center py-20">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal"></div>
+              </div>
+            )}
+
+            {!catalogLoading && catalogError && (
+              <div className="text-center py-20 bg-surface-container-low rounded-3xl border-2 border-dashed border-outline-variant/20">
+                <p className="text-on-surface-variant font-medium">{catalogError}</p>
+              </div>
+            )}
+
+            {!catalogLoading && !catalogError && filteredDocuments.length === 0 && (
               <div className="text-center py-20 bg-surface-container-low rounded-3xl border-2 border-dashed border-outline-variant/20">
                 <FileText className="w-12 h-12 text-on-surface-variant/20 mx-auto mb-4" />
                 <p className="text-on-surface-variant font-medium">

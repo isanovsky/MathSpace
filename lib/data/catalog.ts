@@ -1,6 +1,8 @@
 import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { CatalogDocument, CatalogFolder } from '@/lib/types/catalog';
+import type { CurrentProfile } from '@/lib/auth/getCurrentProfile';
+import { canAccessDocument } from '@/lib/data/access';
 
 interface FolderRow {
   id: string;
@@ -28,6 +30,7 @@ const DOCUMENT_COLUMNS =
 function toDocument(
   row: DocumentRow,
   folderById: Map<string, FolderRow>,
+  profile: CurrentProfile | null,
 ): CatalogDocument {
   const folder = row.folder_id ? folderById.get(row.folder_id) : undefined;
   const parent = folder?.parent_id ? folderById.get(folder.parent_id) : undefined;
@@ -50,10 +53,13 @@ function toDocument(
     author: row.author ?? '',
     createdAt: row.created_at.slice(0, 10),
     hasFile: !!row.file_path,
+    canAccess: canAccessDocument(profile, row.is_premium),
   };
 }
 
-export async function fetchCatalog(includeArchived: boolean) {
+// Archived documents are visible to admins only.
+export async function fetchCatalog(profile: CurrentProfile | null) {
+  const includeArchived = profile?.role === 'admin';
   const admin = createAdminClient();
 
   let docsQuery = admin
@@ -87,12 +93,13 @@ export async function fetchCatalog(includeArchived: boolean) {
     documentCount: counts.get(f.id) ?? 0,
   }));
 
-  const documents = docRows.map((d) => toDocument(d, folderById));
+  const documents = docRows.map((d) => toDocument(d, folderById, profile));
 
   return { folders, documents };
 }
 
-export async function fetchDocumentById(id: string, includeArchived: boolean) {
+export async function fetchDocumentById(id: string, profile: CurrentProfile | null) {
+  const includeArchived = profile?.role === 'admin';
   const admin = createAdminClient();
 
   const [docRes, foldersRes] = await Promise.all([
@@ -110,5 +117,5 @@ export async function fetchDocumentById(id: string, includeArchived: boolean) {
   const folderById = new Map(
     ((foldersRes.data ?? []) as FolderRow[]).map((f) => [f.id, f]),
   );
-  return toDocument(row, folderById);
+  return toDocument(row, folderById, profile);
 }

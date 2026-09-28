@@ -22,4 +22,7 @@ export interface CatalogDocument {
   author: string;
   createdAt: string;
   hasFile: boolean;
+  // Decided by the server (login + premium/admin rule). Clients must not
+  // re-derive this; they only use it to pick lock icons and modals.
+  canAccess: boolean;
 }

@@ -18,10 +18,9 @@ export async function GET(
   }
 
   const profile = await getCurrentProfile();
-  const isAdmin = profile?.role === 'admin';
 
   try {
-    const document = await fetchDocumentById(id, isAdmin);
+    const document = await fetchDocumentById(id, profile);
     if (!document) {
       return NextResponse.json({ error: 'Not found.' }, { status: 404 });
     }

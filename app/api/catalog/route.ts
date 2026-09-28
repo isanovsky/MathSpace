@@ -5,14 +5,14 @@ import { fetchCatalog } from '@/lib/data/catalog';
 export const dynamic = 'force-dynamic';
 
 // Metadata (title, description, premium flag) is public on purpose: locked
-// documents are shown as a teaser. Access to the FILE itself is a separate
-// endpoint with its own check (step 6d). Archived documents are admin-only.
+// documents are shown as a teaser. Each document carries `canAccess`, decided
+// here on the server. Access to the FILE itself is a separate endpoint with
+// its own check (step 6d). Archived documents are admin-only.
 export async function GET() {
   const profile = await getCurrentProfile();
-  const isAdmin = profile?.role === 'admin';
 
   try {
-    const catalog = await fetchCatalog(isAdmin);
+    const catalog = await fetchCatalog(profile);
     return NextResponse.json(catalog);
   } catch (error) {
     console.error('Failed to load catalog:', error);

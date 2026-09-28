@@ -9,20 +9,37 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useParams, useRouter } from 'next/navigation';
-import { getContentById, Document } from '@/lib/contentStore';
+import type { CatalogDocument } from '@/lib/types/catalog';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function DocumentView() {
   const params = useParams();
   const router = useRouter();
   const docId = params.id as string;
-  const [doc, setDoc] = useState<Document | null>(null);
+  const { isLoggedIn } = useAuth();
+  const [doc, setDoc] = useState<CatalogDocument | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
-    const found = getContentById(docId);
-    setDoc(found || null);
-    setIsInitialLoading(false);
+    let active = true;
+
+    fetch(`/api/documents/${docId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!active) return;
+        setDoc(data?.document ?? null);
+        setIsInitialLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setDoc(null);
+        setIsInitialLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [docId]);
 
   const [messages, setMessages] = useState([
@@ -108,6 +125,33 @@ export default function DocumentView() {
           <h1 className="text-2xl font-bold text-primary">Dokumen Tidak Ditemukan</h1>
           <Link href="/library" className="text-secondary hover:underline">Kembali ke Perpustakaan</Link>
         </div>
+      </div>
+    );
+  }
+
+  // The server decided this (login + premium/admin rule); the page only shows it.
+  if (!doc.canAccess) {
+    return (
+      <div className="min-h-screen bg-surface flex flex-col">
+        <Navbar />
+        <main className="flex-1 pt-16 flex items-center justify-center px-6">
+          <div className="text-center space-y-4 max-w-md">
+            <h1 className="text-2xl font-bold text-primary">
+              {isLoggedIn ? 'Konten Premium' : 'Login Diperlukan'}
+            </h1>
+            <p className="text-on-surface-variant">
+              {isLoggedIn
+                ? 'Dokumen ini khusus anggota premium. Upgrade untuk membukanya.'
+                : 'Silakan masuk terlebih dahulu untuk membuka dokumen ini.'}
+            </p>
+            <Link
+              href={isLoggedIn ? '/pricing' : '/login'}
+              className="inline-block bg-secondary text-white font-bold px-6 py-3 rounded-xl hover:opacity-90 transition-all"
+            >
+              {isLoggedIn ? 'Lihat Paket Premium' : 'Masuk'}
+            </Link>
+          </div>
+        </main>
       </div>
     );
   }

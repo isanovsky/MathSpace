@@ -7,16 +7,20 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getContents, Content } from '@/lib/contentStore';
+import type { CatalogDocument } from '@/lib/types/catalog';
 import { useAuth } from '@/hooks/useAuth';
+import { useCatalog } from '@/hooks/useCatalog';
 
 export default function Home() {
   const router = useRouter();
-  const { isLoggedIn, user } = useAuth();
-  const userStatus: 'free' | 'premium' = user?.status === 'premium' ? 'premium' : 'free';
+  const { isLoggedIn, isAdmin, user } = useAuth();
+  // Label only (button text). Real access is decided by the server (canAccess).
+  const userStatus: 'free' | 'premium' = user?.status === 'premium' || isAdmin ? 'premium' : 'free';
   const [searchQuery, setSearchQuery] = useState('');
-  const [allContents] = useState<Content[]>(() =>
-    getContents().filter(c => c.status === 'aktif'),
+  const { documents, isLoading: catalogLoading } = useCatalog();
+  const allContents = useMemo(
+    () => documents.filter(d => d.status === 'aktif'),
+    [documents],
   );
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [modalType, setModalType] = useState<'login' | 'premium'>('premium');
@@ -30,14 +34,9 @@ export default function Home() {
     }
   };
 
-  const handleAction = (doc: Content) => {
-    if (!isLoggedIn) {
-      setModalType('login');
-      setShowUpgradeModal(true);
-      return;
-    }
-    if (doc.isPremium && userStatus !== 'premium') {
-      setModalType('premium');
+  const handleAction = (doc: CatalogDocument) => {
+    if (!doc.canAccess) {
+      setModalType(isLoggedIn ? 'premium' : 'login');
       setShowUpgradeModal(true);
       return;
     }
@@ -56,12 +55,18 @@ export default function Home() {
   };
 
   // Get some featured documents
-  const featuredDoc = useMemo(() => allContents.find(d => d.id === 'calc1-notes') || allContents[0], [allContents]);
-  const secondaryDoc = useMemo(() => allContents.find(d => d.id === 'calc1-m23') || allContents[1], [allContents]);
-  const smallDoc1 = useMemo(() => allContents.find(d => d.id === 'alglin-book') || allContents[2], [allContents]);
-  const smallDoc2 = useMemo(() => allContents.find(d => d.id === 'num-sheet') || allContents[3], [allContents]);
+  // Picked by rule (newest premium, newest free, then the next two newest),
+  // not by hardcoded ids, so it keeps working as documents are added or removed.
+  const [featuredDoc, secondaryDoc, smallDoc1, smallDoc2] = useMemo(() => {
+    const featured = allContents.find(d => d.isPremium) ?? allContents[0];
+    const secondary =
+      allContents.find(d => !d.isPremium && d.id !== featured?.id) ??
+      allContents.find(d => d.id !== featured?.id);
+    const rest = allContents.filter(d => d.id !== featured?.id && d.id !== secondary?.id);
+    return [featured, secondary, rest[0], rest[1]];
+  }, [allContents]);
 
-  if (allContents.length === 0) {
+  if (catalogLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal"></div>
@@ -69,7 +74,7 @@ export default function Home() {
     );
   }
 
-  const isLocked = (doc: Content) => !isLoggedIn || (doc.isPremium && userStatus !== 'premium');
+  const isLocked = (doc: CatalogDocument) => !doc.canAccess;
 
   return (
     <div className="min-h-screen">
