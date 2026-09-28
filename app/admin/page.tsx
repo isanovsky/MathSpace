@@ -8,12 +8,11 @@ import {
   Plus, Edit, Trash2, Archive, CheckCircle2, AlertCircle, X,
   Lock, Globe
 } from 'lucide-react';
-import { getContents, addContent, updateContent, deleteContent, Content } from '@/lib/contentStore';
-import { getFolders, addFolder, updateFolder, deleteFolder, Folder } from '@/lib/folderStore';
+import type { CatalogDocument, CatalogFolder } from '@/lib/types/catalog';
+import { useCatalog } from '@/hooks/useCatalog';
 
 export default function ContentManagementPage() {
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [contents, setContents] = useState<Content[]>([]);
+  const { folders, documents: contents, isLoading: catalogLoading, error: catalogError, refresh } = useCatalog();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   
@@ -43,14 +42,6 @@ export default function ContentManagementPage() {
     status: 'aktif' as 'aktif' | 'diarsipkan'
   });
 
-  useEffect(() => {
-    const loadData = () => {
-      setFolders(getFolders());
-      setContents(getContents());
-    };
-    loadData();
-  }, []);
-
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
@@ -66,77 +57,109 @@ export default function ContentManagementPage() {
     setExpandedFolders(newExpanded);
   };
 
-  const handleCreateFolder = (e: React.FormEvent) => {
+  const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!folderForm.name) return;
-    
-    addFolder({
-      name: folderForm.name,
-      type: folderForm.type,
-      parentId: folderForm.type === 'subfolder' ? folderForm.parentId : null
-    });
-    
-    setFolders(getFolders());
-    setShowFolderModal(false);
-    setFolderForm({ name: '', type: 'matkul', parentId: '' });
-    showToast('Folder berhasil dibuat');
+
+    try {
+      const res = await fetch('/api/admin/folders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: folderForm.name,
+          type: folderForm.type,
+          parentId: folderForm.type === 'subfolder' ? folderForm.parentId : null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Gagal membuat folder');
+
+      await refresh();
+      setShowFolderModal(false);
+      setFolderForm({ name: '', type: 'matkul', parentId: '' });
+      showToast('Folder berhasil dibuat');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Gagal membuat folder', 'error');
+    }
   };
 
-  const handleUpload = (e: React.FormEvent) => {
+  const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadForm.title || !uploadForm.rootFolderId) {
       showToast('Judul dan Mata Kuliah wajib diisi', 'error');
       return;
     }
 
-    const rootFolder = folders.find(f => f.id === uploadForm.rootFolderId);
-    const subfolder = folders.find(f => f.id === uploadForm.folderId);
-    
-    let subject = rootFolder?.name || '';
-    let category = subfolder?.name || rootFolder?.name || '';
-    let finalFolderId = uploadForm.folderId || uploadForm.rootFolderId;
+    const finalFolderId = uploadForm.folderId || uploadForm.rootFolderId;
 
-    addContent({
-      title: uploadForm.title,
-      description: uploadForm.description,
-      type: uploadForm.type,
-      folderId: finalFolderId,
-      subject,
-      category,
-      isPremium: uploadForm.isPremium,
-      status: uploadForm.status,
-      author: 'Dept. Staff'
-    });
-    
-    setContents(getContents());
-    setShowUploadModal(false);
-    setUploadForm({
-      title: '',
-      description: '',
-      type: 'Catatan Kuliah',
-      rootFolderId: '',
-      folderId: '',
-      isPremium: false,
-      status: 'aktif'
-    });
-    showToast('Dokumen berhasil diunggah');
+    try {
+      const res = await fetch('/api/admin/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: uploadForm.title,
+          description: uploadForm.description,
+          type: uploadForm.type,
+          folderId: finalFolderId,
+          isPremium: uploadForm.isPremium,
+          status: uploadForm.status,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Gagal mengunggah dokumen');
+
+      await refresh();
+      setShowUploadModal(false);
+      setUploadForm({
+        title: '',
+        description: '',
+        type: 'Catatan Kuliah',
+        rootFolderId: '',
+        folderId: '',
+        isPremium: false,
+        status: 'aktif'
+      });
+      showToast('Dokumen berhasil diunggah');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Gagal mengunggah dokumen', 'error');
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!showDeleteConfirm) return;
-    
-    if (showDeleteConfirm.type === 'folder') {
-      deleteFolder(showDeleteConfirm.id);
-      setFolders(getFolders());
-      if (selectedFolderId === showDeleteConfirm.id) setSelectedFolderId(null);
-      showToast('Folder berhasil dihapus');
-    } else {
-      deleteContent(showDeleteConfirm.id);
-      setContents(getContents());
-      showToast('Dokumen berhasil dihapus');
-    }
-    
+    const { type, id } = showDeleteConfirm;
     setShowDeleteConfirm(null);
+
+    try {
+      const res = await fetch(
+        type === 'folder' ? `/api/admin/folders/${id}` : `/api/admin/documents/${id}`,
+        { method: 'DELETE' },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Gagal menghapus');
+
+      await refresh();
+      if (type === 'folder' && selectedFolderId === id) setSelectedFolderId(null);
+      showToast(type === 'folder' ? 'Folder berhasil dihapus' : 'Dokumen berhasil dihapus');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Gagal menghapus', 'error');
+    }
+  };
+
+  const handleToggleStatus = async (doc: CatalogDocument) => {
+    try {
+      const res = await fetch(`/api/admin/documents/${doc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: doc.status === 'aktif' ? 'diarsipkan' : 'aktif' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Gagal mengubah status');
+      await refresh();
+      showToast(doc.status === 'aktif' ? 'Dokumen diarsipkan' : 'Dokumen diaktifkan');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Gagal mengubah status', 'error');
+    }
   };
 
   const filteredContents = selectedFolderId 
@@ -144,6 +167,22 @@ export default function ContentManagementPage() {
     : contents;
 
   const rootFolders = folders.filter(f => f.parentId === null);
+
+  if (catalogLoading) {
+    return (
+      <main className="p-8 flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-secondary"></div>
+      </main>
+    );
+  }
+
+  if (catalogError) {
+    return (
+      <main className="p-8 flex items-center justify-center min-h-[60vh]">
+        <p className="text-on-surface-variant">{catalogError}</p>
+      </main>
+    );
+  }
 
   return (
     <main className="p-8">
@@ -346,7 +385,7 @@ export default function ContentManagementPage() {
                                 </button>
                               )}
                               <button 
-                                onClick={() => updateContent(doc.id, { status: doc.status === 'aktif' ? 'diarsipkan' : 'aktif' })}
+                                onClick={() => handleToggleStatus(doc)}
                                 className="p-1.5 rounded-lg hover:bg-surface-container transition-colors"
                                 title={doc.status === 'aktif' ? 'Arsipkan' : 'Aktifkan'}
                                 id={`archive-btn-${doc.id}`}
@@ -659,7 +698,7 @@ export default function ContentManagementPage() {
               </div>
               <h3 className="text-xl font-headline font-bold text-primary mb-2">Konfirmasi Hapus</h3>
               <p className="text-on-surface-variant text-sm mb-8">
-                Apakah Anda yakin ingin menghapus {showDeleteConfirm.type === 'folder' ? 'folder ini beserta isinya' : 'dokumen ini'}? Tindakan ini tidak dapat dibatalkan.
+                Apakah Anda yakin ingin menghapus {showDeleteConfirm.type === 'folder' ? 'folder ini' : 'dokumen ini'}? Tindakan ini tidak dapat dibatalkan.{showDeleteConfirm.type === 'folder' && ' Folder yang masih berisi dokumen atau subfolder tidak bisa dihapus.'}
               </p>
               <div className="flex gap-3">
                 <button 

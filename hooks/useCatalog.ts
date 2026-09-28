@@ -8,15 +8,17 @@ interface CatalogState {
   folders: CatalogFolder[];
   isLoading: boolean;
   error: string | null;
+  refresh: () => void;
 }
 
 export function useCatalog(): CatalogState {
-  const [state, setState] = useState<CatalogState>({
+  const [state, setState] = useState<Omit<CatalogState, 'refresh'>>({
     documents: [],
     folders: [],
     isLoading: true,
     error: null,
   });
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -47,7 +49,9 @@ export function useCatalog(): CatalogState {
     return () => {
       active = false;
     };
-  }, []);
+  }, [reloadToken]);
 
-  return state;
+  const refresh = () => setReloadToken((t) => t + 1);
+
+  return { ...state, refresh };
 }
