@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  UserCheck, MoreVertical, 
+  UserCheck, MoreVertical, Search,
   CheckCircle2, XCircle, AlertCircle, X, ArrowUpRight
 } from 'lucide-react';
 
@@ -28,6 +28,8 @@ export default function VerificationPage() {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,
     message: '',
@@ -102,6 +104,31 @@ export default function VerificationPage() {
     }
   };
 
+  const handleDeleteHistory = async (id: string) => {
+    setOpenMenuId(null);
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/admin/payments/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Gagal menghapus riwayat.');
+      await loadQueue();
+      showToast('Riwayat berhasil dihapus');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Gagal menghapus riwayat.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const filteredQueue = queue.filter((item) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      item.profiles?.name?.toLowerCase().includes(q) ||
+      item.profiles?.email?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <main className="p-8">
       <div className="max-w-7xl mx-auto space-y-12">
@@ -120,14 +147,26 @@ export default function VerificationPage() {
               <UserCheck className="w-5 h-5 text-secondary" />
               Daftar Permintaan Verifikasi
             </h3>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
+              <input
+                type="text"
+                placeholder="Cari nama atau email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-lg text-sm focus:ring-2 focus:ring-secondary/20 w-64"
+              />
+            </div>
           </div>
 
           {isLoading ? (
             <div className="p-12 flex justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary"></div>
             </div>
-          ) : queue.length === 0 ? (
-            <p className="p-12 text-center text-on-surface-variant italic text-sm">Belum ada permintaan verifikasi.</p>
+          ) : filteredQueue.length === 0 ? (
+            <p className="p-12 text-center text-on-surface-variant italic text-sm">
+              {searchQuery ? 'Tidak ada hasil yang cocok.' : 'Belum ada permintaan verifikasi.'}
+            </p>
           ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -142,24 +181,24 @@ export default function VerificationPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/10">
-                {queue.map((item) => (
+                {filteredQueue.map((item) => (
                   <tr key={item.id} className="hover:bg-surface-container-low/30 transition-colors group">
                     <td className="px-6 py-5 font-medium text-primary text-sm">
                       <div>
                         {item.profiles?.name ?? '(akun tidak ditemukan)'}
                         <button 
                           onClick={() => setSelectedItem(item)}
-                          className="text-[10px] font-bold text-secondary hover:underline block mt-1"
+                          className="text-xs font-bold text-secondary hover:underline block mt-1"
                         >
                           Lihat Detail
                         </button>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-on-surface-variant text-xs">{item.profiles?.jurusan || '-'}</td>
-                    <td className="px-6 py-5 text-on-surface-variant text-xs">{item.bank || '-'}</td>
-                    <td className="px-6 py-5 text-on-surface-variant text-xs">Rp {(item.amount ?? 0).toLocaleString('id-ID')}</td>
+                    <td className="px-6 py-5 text-on-surface-variant text-sm">{item.profiles?.jurusan || '-'}</td>
+                    <td className="px-6 py-5 text-on-surface-variant text-sm">{item.bank || '-'}</td>
+                    <td className="px-6 py-5 text-on-surface-variant text-sm">Rp {(item.amount ?? 0).toLocaleString('id-ID')}</td>
                     <td className="px-6 py-5">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                         item.status === 'approved' 
                           ? 'bg-secondary-container text-on-secondary-container' 
                           : item.status === 'pending'
@@ -170,7 +209,7 @@ export default function VerificationPage() {
                       </span>
                     </td>
                     <td className="px-6 py-5 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-2 relative">
                         {item.status === 'pending' && (
                           <>
                             <button 
@@ -191,9 +230,30 @@ export default function VerificationPage() {
                             </button>
                           </>
                         )}
-                        <button className="p-1.5 rounded-lg hover:bg-surface-container transition-colors">
-                          <MoreVertical className="w-4 h-4 text-on-surface-variant" />
-                        </button>
+                        {item.status !== 'pending' && (
+                          <>
+                            <button
+                              onClick={() => setOpenMenuId(openMenuId === item.id ? null : item.id)}
+                              className="p-1.5 rounded-lg hover:bg-surface-container transition-colors"
+                            >
+                              <MoreVertical className="w-4 h-4 text-on-surface-variant" />
+                            </button>
+                            {openMenuId === item.id && (
+                              <>
+                                <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
+                                <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-xl shadow-lg border border-outline-variant/10 py-1 min-w-[160px]">
+                                  <button
+                                    onClick={() => handleDeleteHistory(item.id)}
+                                    disabled={isSubmitting}
+                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                                  >
+                                    Hapus Riwayat
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

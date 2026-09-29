@@ -38,3 +38,38 @@ function friendlyRpcError(message: string): string {
   if (message.includes('PAYMENT_NOT_PENDING')) return 'Permintaan ini sudah diproses sebelumnya.';
   return 'Terjadi kesalahan pada database.';
 }
+
+// Only for cleaning up resolved history (approved/rejected). A pending
+// request must go through approve/reject first — deleting it directly would
+// silently drop a payment nobody ever decided on.
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireAdmin();
+  if (auth.error) return auth.error;
+  const { id } = await params;
+
+  const { data: existing } = await auth.admin
+    .from('payment_queue')
+    .select('status')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (!existing) {
+    return NextResponse.json({ error: 'Permintaan tidak ditemukan.' }, { status: 404 });
+  }
+  if (existing.status === 'pending') {
+    return NextResponse.json(
+      { error: 'Setujui atau tolak dulu sebelum menghapus riwayat ini.' },
+      { status: 400 },
+    );
+  }
+
+  const { error } = await auth.admin.from('payment_queue').delete().eq('id', id);
+  if (error) {
+    return NextResponse.json({ error: 'Gagal menghapus riwayat.' }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}

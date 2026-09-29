@@ -14,6 +14,7 @@ import { useCatalog } from '@/hooks/useCatalog';
 export default function ContentManagementPage() {
   const { folders, documents: contents, isLoading: catalogLoading, error: catalogError, refresh } = useCatalog();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [contentSearch, setContentSearch] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   
   const [showFolderModal, setShowFolderModal] = useState(false);
@@ -181,11 +182,26 @@ export default function ContentManagementPage() {
     }
   };
 
-  const filteredContents = selectedFolderId 
+  const filteredContents = (selectedFolderId 
     ? contents.filter(c => c.folderId === selectedFolderId)
-    : contents;
+    : contents
+  ).filter(c => {
+    const q = contentSearch.trim().toLowerCase();
+    if (!q) return true;
+    return c.title.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
+  });
 
   const rootFolders = folders.filter(f => f.parentId === null);
+
+  // A matkul's badge should count every document inside it, including ones
+  // filed under its subfolders — the server only counts direct membership,
+  // so roll that up here the same way the library page already does.
+  const rootIdByFolder = new Map(folders.map(f => [f.id, f.parentId ?? f.id]));
+  const folderDocCount = new Map<string, number>();
+  contents.forEach(c => {
+    const rootId = rootIdByFolder.get(c.folderId) ?? c.folderId;
+    folderDocCount.set(rootId, (folderDocCount.get(rootId) ?? 0) + 1);
+  });
 
   if (catalogLoading) {
     return (
@@ -272,7 +288,7 @@ export default function ContentManagementPage() {
                           {folder.name}
                         </span>
                         <span className="text-[10px] bg-surface-container-high px-2 py-0.5 rounded-full text-on-surface-variant">
-                          {folder.documentCount}
+                          {folderDocCount.get(folder.id) ?? 0}
                         </span>
                       </button>
                       
@@ -350,7 +366,9 @@ export default function ContentManagementPage() {
                   <input 
                     type="text" 
                     placeholder="Cari dokumen..." 
-                    className="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-lg text-xs focus:ring-2 focus:ring-secondary/20 w-64"
+                    value={contentSearch}
+                    onChange={(e) => setContentSearch(e.target.value)}
+                    className="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-lg text-sm focus:ring-2 focus:ring-secondary/20 w-64"
                   />
                 </div>
               </div>
@@ -373,19 +391,19 @@ export default function ContentManagementPage() {
                       return (
                         <tr key={doc.id} className="hover:bg-surface-container-low/30 transition-colors group">
                           <td className="px-6 py-5 font-medium text-primary text-sm">{doc.title}</td>
-                          <td className="px-6 py-5 text-on-surface-variant text-xs">{doc.type}</td>
-                          <td className="px-6 py-5 text-on-surface-variant text-xs">{subfolder?.name || '—'}</td>
+                          <td className="px-6 py-5 text-on-surface-variant text-sm">{doc.type}</td>
+                          <td className="px-6 py-5 text-on-surface-variant text-sm">{subfolder?.name || '—'}</td>
                           <td className="px-6 py-5">
                             {doc.isPremium ? (
-                              <span className="flex items-center gap-1 text-xs font-bold text-secondary">
+                              <span className="flex items-center gap-1 text-sm font-bold text-secondary">
                                 <Lock className="w-3 h-3" /> Premium
                               </span>
                             ) : (
-                              <span className="text-xs text-on-surface-variant">Gratis</span>
+                              <span className="text-sm text-on-surface-variant">Gratis</span>
                             )}
                           </td>
                           <td className="px-6 py-5">
-                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                               doc.status === 'aktif' ? 'bg-secondary-container text-on-secondary-container' : 'bg-surface-container-high text-on-surface-variant'
                             }`}>
                               {doc.status.toUpperCase()}
