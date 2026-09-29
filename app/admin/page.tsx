@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import type { CatalogDocument, CatalogFolder } from '@/lib/types/catalog';
 import { useCatalog } from '@/hooks/useCatalog';
+import { createClient } from '@/lib/supabase/client';
 
 export default function ContentManagementPage() {
   const { folders, documents: contents, isLoading: catalogLoading, error: catalogError, refresh } = useCatalog();
@@ -114,16 +115,37 @@ export default function ContentManagementPage() {
     const finalFolderId = uploadForm.folderId || uploadForm.rootFolderId;
 
     try {
-      const body = new FormData();
-      body.append('title', uploadForm.title);
-      body.append('description', uploadForm.description);
-      body.append('type', uploadForm.type);
-      body.append('folderId', finalFolderId);
-      body.append('isPremium', String(uploadForm.isPremium));
-      body.append('status', uploadForm.status);
-      body.append('file', uploadFile);
+      // Step 1: ask the server for permission to upload one specific file.
+      const prepRes = await fetch('/api/admin/documents/prepare-upload', { method: 'POST' });
+      const prep = await prepRes.json();
+      if (!prepRes.ok) throw new Error(prep?.error || 'Gagal menyiapkan upload');
 
-      const res = await fetch('/api/admin/documents', { method: 'POST', body });
+      // Step 2: upload the PDF straight to Supabase Storage from the browser.
+      // This never touches our own server, so a 10MB file never hits
+      // Vercel's ~4.5MB request body limit on serverless functions.
+      const supabase = createClient();
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .uploadToSignedUrl(prep.path, prep.token, uploadFile, {
+          contentType: 'application/pdf',
+        });
+      if (uploadError) throw new Error(uploadError.message || 'Gagal mengunggah file');
+
+      // Step 3: now that the file exists, save the metadata row referencing it.
+      const res = await fetch('/api/admin/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: prep.id,
+          filePath: prep.path,
+          title: uploadForm.title,
+          description: uploadForm.description,
+          type: uploadForm.type,
+          folderId: finalFolderId,
+          isPremium: uploadForm.isPremium,
+          status: uploadForm.status,
+        }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Gagal mengunggah dokumen');
 

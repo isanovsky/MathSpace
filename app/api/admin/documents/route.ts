@@ -1,41 +1,40 @@
-import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
 import { friendlyDbError } from '@/lib/data/postgresError';
 
-const MAX_PDF_BYTES = 10 * 1024 * 1024; // 10MB
-
+// Called AFTER the browser has already uploaded the PDF straight to Storage
+// via a signed URL from /api/admin/documents/prepare-upload. This request
+// only carries metadata (JSON), never the file bytes — that split is what
+// keeps large uploads off Vercel's request-body limit.
 export async function POST(request: Request) {
   const auth = await requireAdmin();
   if (auth.error) return auth.error;
 
-  const formData = await request.formData().catch(() => null);
-  if (!formData) {
+  const body = await request.json().catch(() => null);
+  if (!body) {
     return NextResponse.json({ error: 'Body request tidak valid.' }, { status: 400 });
   }
 
-  const title = String(formData.get('title') ?? '').trim();
-  const description = String(formData.get('description') ?? '').trim();
-  const type = String(formData.get('type') ?? '') || 'Catatan Kuliah';
-  const folderId = String(formData.get('folderId') ?? '');
-  const isPremium = formData.get('isPremium') === 'true';
-  const status = formData.get('status') === 'diarsipkan' ? 'diarsipkan' : 'aktif';
-  const file = formData.get('file');
+  const id = typeof body.id === 'string' ? body.id : '';
+  const filePath = typeof body.filePath === 'string' ? body.filePath : '';
+  const title = typeof body.title === 'string' ? body.title.trim() : '';
+  const description = typeof body.description === 'string' ? body.description.trim() : '';
+  const type = typeof body.type === 'string' && body.type ? body.type : 'Catatan Kuliah';
+  const folderId = typeof body.folderId === 'string' ? body.folderId : '';
+  const isPremium = body.isPremium === true;
+  const status = body.status === 'diarsipkan' ? 'diarsipkan' : 'aktif';
 
+  if (!id || !filePath) {
+    return NextResponse.json(
+      { error: 'File belum diunggah. Ulangi proses upload.' },
+      { status: 400 },
+    );
+  }
   if (!title) {
     return NextResponse.json({ error: 'Judul dokumen wajib diisi.' }, { status: 400 });
   }
   if (!folderId) {
     return NextResponse.json({ error: 'Folder wajib dipilih.' }, { status: 400 });
-  }
-  if (!(file instanceof File) || file.size === 0) {
-    return NextResponse.json({ error: 'File PDF wajib diunggah.' }, { status: 400 });
-  }
-  if (file.type !== 'application/pdf') {
-    return NextResponse.json({ error: 'File harus berformat PDF.' }, { status: 400 });
-  }
-  if (file.size > MAX_PDF_BYTES) {
-    return NextResponse.json({ error: 'Ukuran file maksimal 10MB.' }, { status: 400 });
   }
 
   const { data: folder } = await auth.admin
@@ -45,22 +44,6 @@ export async function POST(request: Request) {
     .maybeSingle();
   if (!folder) {
     return NextResponse.json({ error: 'Folder tidak ditemukan.' }, { status: 400 });
-  }
-
-  // Upload first, then insert the row referencing it. If the insert fails
-  // afterwards we clean up the orphaned file — the reverse order would risk
-  // a document row with no file behind it, which is worse (users see an
-  // entry they can never open).
-  const id = randomUUID();
-  const filePath = `${id}.pdf`;
-
-  const { error: uploadError } = await auth.admin.storage
-    .from('documents')
-    .upload(filePath, file, { contentType: 'application/pdf', upsert: false });
-
-  if (uploadError) {
-    console.error('Failed to upload file:', uploadError);
-    return NextResponse.json({ error: 'Gagal mengunggah file.' }, { status: 500 });
   }
 
   const { error: insertError } = await auth.admin.from('documents').insert({
@@ -76,6 +59,7 @@ export async function POST(request: Request) {
   });
 
   if (insertError) {
+    // Clean up the orphaned file so it doesn't sit there unreferenced.
     await auth.admin.storage.from('documents').remove([filePath]);
     return NextResponse.json({ error: friendlyDbError(insertError) }, { status: 400 });
   }
