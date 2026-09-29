@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Search, Download, Share2, Printer, ChevronRight, 
+  Search, Download, Share2, ChevronRight, 
   Send, Sparkles, Bot, User, MessageSquare, 
   Maximize2, ZoomIn, ZoomOut, RotateCcw, FileText, AlertCircle
 } from 'lucide-react';
@@ -88,7 +88,7 @@ export default function DocumentView() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: userMessage, documentTitle: doc?.title }),
+        body: JSON.stringify({ question: userMessage, documentId: docId }),
       });
 
       const data = await res.json();
@@ -126,10 +126,6 @@ export default function DocumentView() {
       navigator.clipboard.writeText(window.location.href);
       alert('Tautan disalin ke papan klip!');
     }
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   if (isInitialLoading) {
@@ -213,12 +209,6 @@ export default function DocumentView() {
                   className="flex items-center gap-2 px-4 py-2 bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-xl border border-outline-variant/10 text-sm font-medium shadow-sm"
                 >
                   <Share2 className="w-4 h-4" /> Bagikan
-                </button>
-                <button 
-                  onClick={handlePrint}
-                  className="p-2 bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-xl border border-outline-variant/10 shadow-sm"
-                >
-                  <Printer className="w-4 h-4" />
                 </button>
               </div>
             </div>

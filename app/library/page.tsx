@@ -123,9 +123,9 @@ function LibraryContent() {
       
       <div className="flex pt-16 min-h-screen">
         {/* Sidebar Filter */}
-        <aside className="fixed left-0 top-16 bottom-0 w-64 bg-surface-container-low border-r border-outline-variant/10 p-6 hidden lg:flex flex-col gap-8 overflow-y-auto">
+        <aside className="fixed left-0 top-16 bottom-0 w-80 bg-surface-container-low border-r border-outline-variant/10 p-6 hidden lg:flex flex-col gap-8 overflow-y-auto">
           <div>
-            <h2 className="text-teal-600 font-bold text-xs uppercase tracking-widest mb-4">Library Explorer</h2>
+            <h2 className="text-teal-600 font-bold text-xs uppercase tracking-widest mb-4">Library Exploration</h2>
             <div className="space-y-6">
               <div>
                 <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 flex items-center gap-2">
@@ -165,6 +165,7 @@ function LibraryContent() {
                               setSelectedFolderId(folder.id);
                               setSelectedSubfolderId(null);
                             }}
+                            title={folder.name}
                             className={`flex-1 text-left px-2 py-2 rounded-lg text-sm transition-all flex items-center justify-between ${
                               isSelected 
                               ? 'bg-white text-primary font-bold shadow-sm border border-outline-variant/10' 
@@ -189,6 +190,7 @@ function LibraryContent() {
                                     setSelectedFolderId(folder.id);
                                     setSelectedSubfolderId(sub.id);
                                   }}
+                                  title={sub.name}
                                   className={`w-full text-left pl-8 pr-3 py-1.5 rounded-lg text-xs transition-all flex items-center justify-between ${
                                     isSubSelected 
                                     ? 'bg-secondary/10 text-secondary font-bold' 
@@ -221,7 +223,7 @@ function LibraryContent() {
         </aside>
 
         {/* Main Content */}
-        <main className="lg:ml-64 flex-1 p-8">
+        <main className="lg:ml-80 flex-1 p-8">
           <div className="max-w-6xl mx-auto space-y-8">
             {/* Breadcrumbs */}
             {selectedFolderId && (

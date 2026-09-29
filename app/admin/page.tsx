@@ -626,6 +626,7 @@ export default function ContentManagementPage() {
                       >
                         <option>Catatan Kuliah</option>
                         <option>Kumpulan Soal</option>
+                        <option>Pembahasan Soal</option>
                         <option>Buku Teks</option>
                         <option>Tips & Trik</option>
                         <option>Spreadsheet</option>
