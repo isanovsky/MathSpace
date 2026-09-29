@@ -21,20 +21,20 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/hooks/useAuth';
 
+interface PaymentRow {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  bank: string | null;
+  amount: number | null;
+  sender_name: string | null;
+  reason: string | null;
+  created_at: string;
+}
+
 export default function ProfilePage() {
   const { user, isLoading: authLoading, refresh } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  // TODO(step 7): masih baca dari localStorage sampai payment_queue
-  // dimigrasikan ke Supabase.
-  const [payments] = useState<any[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const storedPayments = localStorage.getItem('mathspace_payments');
-      return storedPayments ? JSON.parse(storedPayments) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   const [editForm, setEditForm] = useState({
@@ -55,6 +55,14 @@ export default function ProfilePage() {
       window.location.href = '/login';
     }
   }, [authLoading, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch('/api/payments/history')
+      .then((res) => (res.ok ? res.json() : { payments: [] }))
+      .then((data) => setPayments(data.payments ?? []))
+      .catch(() => setPayments([]));
+  }, [user]);
 
   const startEditing = () => {
     if (!user) return;
@@ -277,22 +285,35 @@ export default function ProfilePage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-outline-variant/10">
-                        {payments.map((payment, i) => (
-                          <tr key={i} className="hover:bg-surface-container-low/30 transition-colors">
-                            <td className="px-8 py-5 text-sm text-navy font-medium">{payment.date}</td>
-                            <td className="px-8 py-5 text-sm text-navy font-bold">{payment.amount}</td>
+                        {payments.map((payment) => {
+                          const statusLabel =
+                            payment.status === 'approved' ? 'Berhasil' :
+                            payment.status === 'pending' ? 'Pending' : 'Ditolak';
+                          const description =
+                            payment.status === 'rejected' && payment.reason
+                              ? payment.reason
+                              : `Transfer ${payment.bank ?? '-'} a.n. ${payment.sender_name ?? '-'}`;
+                          return (
+                          <tr key={payment.id} className="hover:bg-surface-container-low/30 transition-colors">
+                            <td className="px-8 py-5 text-sm text-navy font-medium">
+                              {new Date(payment.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </td>
+                            <td className="px-8 py-5 text-sm text-navy font-bold">
+                              Rp {(payment.amount ?? 0).toLocaleString('id-ID')}
+                            </td>
                             <td className="px-8 py-5">
                               <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
-                                payment.status === 'Berhasil' ? 'bg-green-100 text-green-700' : 
-                                payment.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 
+                                statusLabel === 'Berhasil' ? 'bg-green-100 text-green-700' : 
+                                statusLabel === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 
                                 'bg-red-100 text-red-700'
                               }`}>
-                                {payment.status}
+                                {statusLabel}
                               </span>
                             </td>
-                            <td className="px-8 py-5 text-xs text-on-surface-variant">{payment.description}</td>
+                            <td className="px-8 py-5 text-xs text-on-surface-variant">{description}</td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

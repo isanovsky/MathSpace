@@ -1,5 +1,6 @@
-// Shapes returned by the catalog API. Kept identical to the old
-// localStorage `Document` / `Folder` interfaces so pages need minimal changes.
+// Shapes returned by the catalog API. Kept close to the original Document /
+// Folder interfaces so pages needed minimal changes when migrating off
+// localStorage.
 // Note: the storage path of a file is never exposed here, only `hasFile`.
 export interface CatalogFolder {
   id: string;
