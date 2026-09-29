@@ -125,7 +125,7 @@ function LibraryContent() {
         {/* Sidebar Filter */}
         <aside className="fixed left-0 top-16 bottom-0 w-64 bg-surface-container-low border-r border-outline-variant/10 p-6 hidden lg:flex flex-col gap-8 overflow-y-auto">
           <div>
-            <h2 className="text-teal-600 font-bold text-xs uppercase tracking-widest mb-4">Penjelajah Perpustakaan</h2>
+            <h2 className="text-teal-600 font-bold text-xs uppercase tracking-widest mb-4">Library Explorer</h2>
             <div className="space-y-6">
               <div>
                 <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 flex items-center gap-2">

@@ -41,6 +41,14 @@ export default function ContentManagementPage() {
     isPremium: false,
     status: 'aktif' as 'aktif' | 'diarsipkan'
   });
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+
+  const MAX_PDF_BYTES = 10 * 1024 * 1024; // 10MB — must match the server's limit
+
+  const closeUploadModal = () => {
+    setShowUploadModal(false);
+    setUploadFile(null);
+  };
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ show: true, message, type });
@@ -89,27 +97,38 @@ export default function ContentManagementPage() {
       showToast('Judul dan Mata Kuliah wajib diisi', 'error');
       return;
     }
+    if (!uploadFile) {
+      showToast('File PDF wajib diunggah', 'error');
+      return;
+    }
+    if (uploadFile.type !== 'application/pdf') {
+      showToast('File harus berformat PDF', 'error');
+      return;
+    }
+    if (uploadFile.size > MAX_PDF_BYTES) {
+      showToast('Ukuran file maksimal 10MB', 'error');
+      return;
+    }
 
     const finalFolderId = uploadForm.folderId || uploadForm.rootFolderId;
 
     try {
-      const res = await fetch('/api/admin/documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: uploadForm.title,
-          description: uploadForm.description,
-          type: uploadForm.type,
-          folderId: finalFolderId,
-          isPremium: uploadForm.isPremium,
-          status: uploadForm.status,
-        }),
-      });
+      const body = new FormData();
+      body.append('title', uploadForm.title);
+      body.append('description', uploadForm.description);
+      body.append('type', uploadForm.type);
+      body.append('folderId', finalFolderId);
+      body.append('isPremium', String(uploadForm.isPremium));
+      body.append('status', uploadForm.status);
+      body.append('file', uploadFile);
+
+      const res = await fetch('/api/admin/documents', { method: 'POST', body });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Gagal mengunggah dokumen');
 
       await refresh();
       setShowUploadModal(false);
+      setUploadFile(null);
       setUploadForm({
         title: '',
         description: '',
@@ -536,7 +555,7 @@ export default function ContentManagementPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowUploadModal(false)}
+              onClick={closeUploadModal}
               className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             />
             <motion.div 
@@ -546,7 +565,7 @@ export default function ContentManagementPage() {
               className="relative bg-white rounded-3xl shadow-2xl w-full max-w-[560px] max-h-[90vh] overflow-y-auto p-8"
             >
               <button 
-                onClick={() => setShowUploadModal(false)}
+                onClick={closeUploadModal}
                 className="absolute top-4 right-4 p-2 hover:bg-surface-container rounded-full transition-colors"
               >
                 <X className="w-5 h-5 text-on-surface-variant" />
@@ -580,6 +599,21 @@ export default function ContentManagementPage() {
                       rows={3}
                       className="w-full px-4 py-3 rounded-xl bg-surface-container-low border border-outline-variant/10 focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all text-sm resize-none"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">File PDF *</label>
+                    <label className={`flex items-center justify-center gap-2 w-full px-4 py-6 rounded-xl border-2 border-dashed cursor-pointer transition-all text-sm ${
+                      uploadFile ? 'border-secondary bg-secondary/5 text-secondary' : 'border-outline-variant/30 bg-surface-container-low text-on-surface-variant hover:border-secondary'
+                    }`}>
+                      {uploadFile ? `${uploadFile.name} (${(uploadFile.size / 1024 / 1024).toFixed(1)} MB)` : 'Klik untuk pilih file PDF, maks 10MB'}
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        className="hidden"
+                        onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                      />
+                    </label>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -658,7 +692,7 @@ export default function ContentManagementPage() {
                 <div className="flex gap-3 pt-4">
                   <button 
                     type="button"
-                    onClick={() => setShowUploadModal(false)}
+                    onClick={closeUploadModal}
                     className="flex-1 py-4 rounded-xl text-sm font-bold text-on-surface-variant bg-surface-container hover:bg-surface-container-high transition-colors"
                   >
                     Batal

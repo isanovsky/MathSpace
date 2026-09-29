@@ -70,5 +70,10 @@ export async function DELETE(
     return NextResponse.json({ error: friendlyDbError(error) }, { status: 400 });
   }
 
+  // File naming is deterministic (`${id}.pdf`), so no lookup needed. Ignore
+  // failure here — a leftover file in Storage is harmless, unlike a document
+  // row pointing at nothing.
+  await auth.admin.storage.from('documents').remove([`${id}.pdf`]);
+
   return NextResponse.json({ ok: true });
 }

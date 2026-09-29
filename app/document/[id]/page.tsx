@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, Download, Share2, Printer, ChevronRight, 
   Send, Sparkles, Bot, User, MessageSquare, 
-  Maximize2, ZoomIn, ZoomOut, RotateCcw 
+  Maximize2, ZoomIn, ZoomOut, RotateCcw, FileText, AlertCircle
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useParams, useRouter } from 'next/navigation';
@@ -41,6 +41,27 @@ export default function DocumentView() {
       active = false;
     };
   }, [docId]);
+
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [fileError, setFileError] = useState('');
+
+  useEffect(() => {
+    if (!doc || !doc.hasFile) return;
+    let active = true;
+
+    fetch(`/api/documents/${docId}/file`)
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        if (active) setFileUrl(data.url);
+      })
+      .catch(() => {
+        if (active) setFileError('Gagal memuat file. Coba muat ulang halaman.');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [doc, docId]);
 
   const [messages, setMessages] = useState([
     { role: 'ai', content: `Halo! Saya asisten AI Anda untuk MathSpace. Saya telah memindai ${doc?.title || 'dokumen'}. Apa yang bisa saya bantu hari ini?` }
@@ -83,14 +104,16 @@ export default function DocumentView() {
   };
 
   const handleDownload = () => {
-    // Simulate download
+    if (!fileUrl) {
+      alert(fileError || 'File belum siap diunduh.');
+      return;
+    }
     const link = document.createElement('a');
-    link.href = '#';
-    link.download = `${doc?.title || 'document'}.${doc?.type.toLowerCase() || 'pdf'}`;
+    link.href = fileUrl;
+    link.download = `${doc?.title || 'document'}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    alert('Unduhan dimulai!');
   };
 
   const handleShare = () => {
@@ -200,67 +223,29 @@ export default function DocumentView() {
               </div>
             </div>
 
-            {/* Simulated PDF Page */}
-            <div className="relative bg-white shadow-2xl min-h-[1100px] p-12 md:p-20 flex flex-col gap-12 group rounded-sm border border-outline-variant/10">
-              <div className="absolute top-0 right-0 w-48 h-48 math-pattern opacity-10 pointer-events-none"></div>
-              
-              <div className="border-b border-outline-variant/20 pb-8 flex justify-between items-start">
-                <div>
-                  <p className="font-headline font-bold text-primary tracking-tighter text-xl">MATEMATIKA ITS</p>
-                  <p className="text-[10px] text-on-surface-variant tracking-[0.2em] uppercase">Departemen Kalkulus Terapan</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-primary">Kode Ujian: MTH202-A</p>
-                  <p className="text-xs text-on-surface-variant">Semester Genap 2024</p>
-                </div>
+            {/* PDF Viewer */}
+            {!doc.hasFile ? (
+              <div className="bg-white rounded-sm border border-outline-variant/10 shadow-2xl min-h-[500px] flex flex-col items-center justify-center text-center p-12 gap-3">
+                <FileText className="w-12 h-12 text-on-surface-variant/30" />
+                <p className="text-on-surface-variant font-medium">Dokumen ini belum memiliki file.</p>
+                <p className="text-on-surface-variant text-sm">Hubungi admin untuk mengunggah file PDF-nya.</p>
               </div>
-
-              <div className="space-y-12">
-                {/* Problem 1 */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <span className="w-8 h-8 flex items-center justify-center bg-primary text-white font-headline font-bold text-sm rounded-sm">01</span>
-                    <p className="text-lg font-medium text-primary">Integrasi Parsial</p>
-                  </div>
-                  <p className="text-on-surface-variant italic">Evaluasi integral tak tentu dari x²eˣ dx.</p>
-                  <div className="p-6 bg-surface-container-low rounded-xl border-l-4 border-secondary/40 font-mono text-sm leading-relaxed text-on-surface">
-                    ∫ x²eˣ dx = x²eˣ - ∫ 2xeˣ dx <br/>
-                    Misal u = x², dv = eˣdx ⇒ du = 2xdx, v = eˣ <br/>
-                    Menerapkan rumus lagi untuk ∫ 2xeˣ dx... <br/>
-                    <span className="text-secondary font-bold">Hasil: eˣ(x² - 2x + 2) + C</span>
-                  </div>
-                </div>
-
-                {/* Problem 3 */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <span className="w-8 h-8 flex items-center justify-center bg-primary text-white font-headline font-bold text-sm rounded-sm">03</span>
-                    <p className="text-lg font-medium text-primary">Ekspansi Deret Taylor</p>
-                  </div>
-                  <p className="text-on-surface-variant italic">Temukan deret Maclaurin untuk f(x) = sin(x) hingga suku derajat ke-5.</p>
-                  <div className="p-6 bg-surface-container-low rounded-xl border-l-4 border-secondary/40 font-mono text-sm leading-relaxed text-on-surface">
-                    sin(x) = &sum;_{'{'}n=0{'}'}^&infin; (-1)&sup2; x&sup2;&sup2;&sup1; / (2n+1)! <br/>
-                    f(0) = 0, f&apos;(0) = 1, f&apos;&apos;(0) = 0, f&apos;&apos;&apos;(0) = -1... <br/>
-                    <span className="text-secondary font-bold">Hasil: x - x&sup3;/3! + x&sup5;/5! - ...</span>
-                  </div>
-                </div>
-
-                {/* Visual Aid */}
-                <div className="relative w-full h-64 bg-surface-container-low rounded-2xl overflow-hidden group/img border border-outline-variant/10">
-                  <div className="absolute inset-0 flex items-center justify-center text-outline opacity-20">
-                    <Sparkles className="w-24 h-24" />
-                  </div>
-                  <div className="absolute bottom-4 left-6">
-                    <p className="text-[10px] uppercase tracking-widest font-bold text-primary">Gambar 2.1</p>
-                    <p className="text-sm font-headline font-medium text-primary">Visualisasi luas di bawah kurva f(x) = sin(x)</p>
-                  </div>
-                </div>
+            ) : fileError ? (
+              <div className="bg-white rounded-sm border border-outline-variant/10 shadow-2xl min-h-[500px] flex flex-col items-center justify-center text-center p-12 gap-3">
+                <AlertCircle className="w-12 h-12 text-red-400" />
+                <p className="text-on-surface-variant font-medium">{fileError}</p>
               </div>
-
-              <div className="mt-auto pt-8 text-[10px] text-center text-outline uppercase tracking-widest border-t border-outline-variant/10">
-                Dokumen Rahasia • Hanya untuk Penggunaan Akademik • © 2024 Matematika ITS
+            ) : !fileUrl ? (
+              <div className="bg-white rounded-sm border border-outline-variant/10 shadow-2xl min-h-[500px] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-secondary"></div>
               </div>
-            </div>
+            ) : (
+              <iframe
+                src={fileUrl}
+                title={doc.title}
+                className="w-full min-h-[1100px] rounded-sm border border-outline-variant/10 shadow-2xl bg-white"
+              />
+            )}
           </div>
         </section>
 

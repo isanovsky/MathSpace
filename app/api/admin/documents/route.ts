@@ -1,24 +1,41 @@
+import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
 import { friendlyDbError } from '@/lib/data/postgresError';
+
+const MAX_PDF_BYTES = 10 * 1024 * 1024; // 10MB
 
 export async function POST(request: Request) {
   const auth = await requireAdmin();
   if (auth.error) return auth.error;
 
-  const body = await request.json().catch(() => null);
-  const title = typeof body?.title === 'string' ? body.title.trim() : '';
-  const description = typeof body?.description === 'string' ? body.description.trim() : '';
-  const type = typeof body?.type === 'string' && body.type ? body.type : 'Catatan Kuliah';
-  const folderId = typeof body?.folderId === 'string' ? body.folderId : '';
-  const isPremium = body?.isPremium === true;
-  const status = body?.status === 'diarsipkan' ? 'diarsipkan' : 'aktif';
+  const formData = await request.formData().catch(() => null);
+  if (!formData) {
+    return NextResponse.json({ error: 'Body request tidak valid.' }, { status: 400 });
+  }
+
+  const title = String(formData.get('title') ?? '').trim();
+  const description = String(formData.get('description') ?? '').trim();
+  const type = String(formData.get('type') ?? '') || 'Catatan Kuliah';
+  const folderId = String(formData.get('folderId') ?? '');
+  const isPremium = formData.get('isPremium') === 'true';
+  const status = formData.get('status') === 'diarsipkan' ? 'diarsipkan' : 'aktif';
+  const file = formData.get('file');
 
   if (!title) {
     return NextResponse.json({ error: 'Judul dokumen wajib diisi.' }, { status: 400 });
   }
   if (!folderId) {
     return NextResponse.json({ error: 'Folder wajib dipilih.' }, { status: 400 });
+  }
+  if (!(file instanceof File) || file.size === 0) {
+    return NextResponse.json({ error: 'File PDF wajib diunggah.' }, { status: 400 });
+  }
+  if (file.type !== 'application/pdf') {
+    return NextResponse.json({ error: 'File harus berformat PDF.' }, { status: 400 });
+  }
+  if (file.size > MAX_PDF_BYTES) {
+    return NextResponse.json({ error: 'Ukuran file maksimal 10MB.' }, { status: 400 });
   }
 
   const { data: folder } = await auth.admin
@@ -30,23 +47,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Folder tidak ditemukan.' }, { status: 400 });
   }
 
-  const { data: document, error } = await auth.admin
-    .from('documents')
-    .insert({
-      title,
-      description,
-      type,
-      folder_id: folderId,
-      is_premium: isPremium,
-      status,
-      author: auth.profile.name || 'Dept. Staff',
-    })
-    .select('id')
-    .single();
+  // Upload first, then insert the row referencing it. If the insert fails
+  // afterwards we clean up the orphaned file — the reverse order would risk
+  // a document row with no file behind it, which is worse (users see an
+  // entry they can never open).
+  const id = randomUUID();
+  const filePath = `${id}.pdf`;
 
-  if (error || !document) {
-    return NextResponse.json({ error: friendlyDbError(error) }, { status: 400 });
+  const { error: uploadError } = await auth.admin.storage
+    .from('documents')
+    .upload(filePath, file, { contentType: 'application/pdf', upsert: false });
+
+  if (uploadError) {
+    console.error('Failed to upload file:', uploadError);
+    return NextResponse.json({ error: 'Gagal mengunggah file.' }, { status: 500 });
   }
 
-  return NextResponse.json({ id: document.id });
+  const { error: insertError } = await auth.admin.from('documents').insert({
+    id,
+    title,
+    description,
+    type,
+    folder_id: folderId,
+    is_premium: isPremium,
+    status,
+    author: auth.profile.name || 'Dept. Staff',
+    file_path: filePath,
+  });
+
+  if (insertError) {
+    await auth.admin.storage.from('documents').remove([filePath]);
+    return NextResponse.json({ error: friendlyDbError(insertError) }, { status: 400 });
+  }
+
+  return NextResponse.json({ id });
 }
