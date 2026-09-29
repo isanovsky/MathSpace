@@ -23,6 +23,7 @@ export default function Pricing() {
   const router = useRouter();
   const { user: currentUser, refresh } = useAuth();
   const [senderName, setSenderName] = useState('');
+  const [proofUrl, setProofUrl] = useState('');
   const [bank, setBank] = useState<'BCA' | 'Mandiri' | ''>('');
   const [transferTime, setTransferTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,7 +53,7 @@ export default function Pricing() {
 
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser || !bank || !transferTime) return;
+    if (!currentUser || !bank || !transferTime || !proofUrl) return;
 
     setIsSubmitting(true);
     setFormError('');
@@ -61,7 +62,7 @@ export default function Pricing() {
       const res = await fetch('/api/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senderName, bank, transferTime }),
+        body: JSON.stringify({ senderName, bank, transferTime, proofUrl }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Gagal mengirim permintaan.');
@@ -69,6 +70,7 @@ export default function Pricing() {
       await refresh();
       setBank('');
       setTransferTime('');
+      setProofUrl('');
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Gagal mengirim permintaan.');
     } finally {
@@ -292,6 +294,21 @@ export default function Pricing() {
                       onChange={(e) => setTransferTime(e.target.value)}
                       className="w-full px-4 py-2 bg-white border border-outline-variant/10 rounded-xl text-sm focus:ring-2 focus:ring-secondary/20 transition-all"
                     />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-on-surface-variant uppercase mb-1 block">Link Bukti Transfer</label>
+                    <input
+                      type="url"
+                      required
+                      value={proofUrl}
+                      onChange={(e) => setProofUrl(e.target.value)}
+                      placeholder="https://drive.google.com/..."
+                      className="w-full px-4 py-2 bg-white border border-outline-variant/10 rounded-xl text-sm focus:ring-2 focus:ring-secondary/20 transition-all"
+                    />
+                    <p className="text-[10px] text-on-surface-variant mt-1">
+                      Unggah screenshot bukti transfer ke Google Drive, lalu ubah akses jadi &quot;Siapa saja yang memiliki link&quot; dan tempel link-nya di sini.
+                    </p>
                   </div>
 
                   {formError && (

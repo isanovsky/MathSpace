@@ -12,7 +12,7 @@ export async function GET() {
   const { data, error } = await auth.admin
     .from('payment_queue')
     .select(
-      'id, status, bank, amount, sender_name, transfer_time, reason, created_at, ' +
+      'id, status, bank, amount, sender_name, transfer_time, proof_image_url, reason, created_at, ' +
         'profiles ( id, name, email, jurusan )',
     )
     .order('created_at', { ascending: false });

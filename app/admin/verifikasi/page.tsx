@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   UserCheck, MoreVertical, 
-  CheckCircle2, XCircle, AlertCircle, X
+  CheckCircle2, XCircle, AlertCircle, X, ArrowUpRight
 } from 'lucide-react';
 
 interface PaymentItem {
@@ -14,6 +14,7 @@ interface PaymentItem {
   amount: number | null;
   sender_name: string | null;
   transfer_time: string | null;
+  proof_image_url: string | null;
   reason: string | null;
   created_at: string;
   profiles: { id: string; name: string; email: string; jurusan: string | null } | null;
@@ -233,9 +234,20 @@ export default function VerificationPage() {
                 </div>
 
                 <div className="space-y-6">
-                  <div className="p-3 rounded-xl bg-surface-container-low text-xs text-on-surface-variant italic">
-                    Belum ada bukti transfer bergambar &mdash; cocokkan data di bawah dengan mutasi rekening secara manual sebelum menyetujui.
-                  </div>
+                  {selectedItem.proof_image_url ? (
+                    <a
+                      href={selectedItem.proof_image_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-surface-container-low text-sm font-bold text-secondary hover:bg-secondary/10 transition-all"
+                    >
+                      Buka Link Bukti Transfer <ArrowUpRight className="w-4 h-4" />
+                    </a>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-yellow-50 text-xs text-yellow-800 italic">
+                      User tidak menyertakan link bukti transfer.
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Nama Pengirim</p>

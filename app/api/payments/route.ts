@@ -5,6 +5,15 @@ import { createAdminClient } from '@/lib/supabase/admin';
 const FIXED_AMOUNT = 10000; // Rp10rb/6 bulan — never trust an amount from the client.
 const ALLOWED_BANKS = ['BCA', 'Mandiri'];
 
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 // Submit a new payment verification request.
 export async function POST(request: Request) {
   const profile = await getCurrentProfile();
@@ -22,6 +31,7 @@ export async function POST(request: Request) {
   const senderName = typeof body?.senderName === 'string' ? body.senderName.trim() : '';
   const bank = typeof body?.bank === 'string' ? body.bank : '';
   const transferTime = typeof body?.transferTime === 'string' ? body.transferTime : '';
+  const proofUrl = typeof body?.proofUrl === 'string' ? body.proofUrl.trim() : '';
 
   if (!senderName) {
     return NextResponse.json({ error: 'Nama pengirim wajib diisi.' }, { status: 400 });
@@ -32,6 +42,12 @@ export async function POST(request: Request) {
   if (!transferTime || Number.isNaN(Date.parse(transferTime))) {
     return NextResponse.json({ error: 'Waktu transfer tidak valid.' }, { status: 400 });
   }
+  if (!isValidHttpUrl(proofUrl)) {
+    return NextResponse.json(
+      { error: 'Link bukti transfer wajib diisi dan harus berupa URL yang valid (https://...).' },
+      { status: 400 },
+    );
+  }
 
   const admin = createAdminClient();
   const { error } = await admin.from('payment_queue').insert({
@@ -40,6 +56,7 @@ export async function POST(request: Request) {
     bank,
     amount: FIXED_AMOUNT,
     transfer_time: transferTime,
+    proof_image_url: proofUrl,
     status: 'pending',
   });
 

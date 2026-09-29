@@ -47,6 +47,13 @@ export default function RegisterPage() {
     
     if (!formData.fullName) newErrors.fullName = 'Nama lengkap wajib diisi';
     if (!formData.department) newErrors.department = 'Jurusan wajib diisi';
+    const yearNum = Number(formData.year);
+    const currentYear = new Date().getFullYear();
+    if (!formData.year || Number.isNaN(yearNum)) {
+      newErrors.year = 'Angkatan wajib diisi';
+    } else if (yearNum < 2023 || yearNum > currentYear) {
+      newErrors.year = `Angkatan harus antara 2023 dan ${currentYear}`;
+    }
     if (!formData.email) {
       newErrors.email = 'Email wajib diisi';
     } else if (!formData.email.includes('@')) {
@@ -221,18 +228,17 @@ export default function RegisterPage() {
                 <label className="text-xs font-bold text-navy uppercase tracking-wider">Angkatan</label>
                 <div className="relative">
                   <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <select 
-                    className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal/20 focus:border-teal transition-all outline-none text-sm appearance-none"
+                  <input
+                    type="number"
+                    min={2023}
+                    max={new Date().getFullYear()}
+                    placeholder="2023"
+                    className={`w-full pl-11 pr-4 py-2.5 bg-white border ${errors.year ? 'border-red-500' : 'border-gray-200'} rounded-xl focus:ring-2 focus:ring-teal/20 focus:border-teal transition-all outline-none text-sm`}
                     value={formData.year}
                     onChange={(e) => setFormData({...formData, year: e.target.value})}
-                  >
-                    <option value="2021">2021</option>
-                    <option value="2022">2022</option>
-                    <option value="2023">2023</option>
-                    <option value="2024">2024</option>
-                    <option value="2025">2025</option>
-                  </select>
+                  />
                 </div>
+                {errors.year && <p className="text-[10px] text-red-500">{errors.year}</p>}
               </div>
             </div>
 
