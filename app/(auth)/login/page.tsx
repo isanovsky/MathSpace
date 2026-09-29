@@ -91,10 +91,10 @@ export default function LoginPage() {
           className="relative z-10 space-y-8"
         >
           <h1 className="text-5xl font-display font-bold leading-tight">
-            Pusat Pengetahuan <br/> Matematika ITS.
+            Platform Repositori Tutorial dan Pembahasan <br/> Matematika ITS.
           </h1>
           <p className="text-gray-400 text-lg max-w-md">
-            Akses ribuan dokumen akademik, pembahasan soal, dan bantuan AI dalam satu platform terintegrasi.
+            Akses ratusan dokumen akademik, pembahasan soal, dan bantuan AI dalam satu platform terintegrasi.
           </p>
 
           <div className="space-y-6 pt-8">
@@ -129,7 +129,7 @@ export default function LoginPage() {
         </motion.div>
 
         <div className="absolute bottom-12 left-12 text-xs text-gray-500 uppercase tracking-widest">
-          © 2024 ITS Mathematics Department
+          © 2026 ITS Mathematics Department
         </div>
       </div>
 

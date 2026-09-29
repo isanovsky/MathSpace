@@ -159,7 +159,7 @@ export default function RegisterPage() {
         </motion.div>
 
         <div className="absolute bottom-12 left-12 text-xs text-gray-500 uppercase tracking-widest">
-          © 2024 ITS Mathematics Department
+          © 2026 ITS Mathematics Department
         </div>
       </div>
 

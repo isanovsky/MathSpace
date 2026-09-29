@@ -2,18 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { CheckCircle2, XCircle, Upload, Copy, ArrowRight, ShieldCheck, Star, Sparkles, CreditCard, Lock, User, Clock } from 'lucide-react';
+import { CheckCircle2, XCircle, Copy, ArrowRight, ShieldCheck, Star, Sparkles, CreditCard, Lock, Clock, AlertCircle } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
+interface LatestPayment {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reason: string | null;
+}
+
+const BANKS = [
+  { id: 'BCA', label: 'BCA', account: '023-4455-991', accountRaw: '0234455991' },
+  { id: 'Mandiri', label: 'Mandiri', account: '121-00-1234567-8', accountRaw: '1210012345678' },
+] as const;
+
 export default function Pricing() {
   const router = useRouter();
-  const { user: currentUser } = useAuth();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const { user: currentUser, refresh } = useAuth();
   const [senderName, setSenderName] = useState('');
+  const [bank, setBank] = useState<'BCA' | 'Mandiri' | ''>('');
+  const [transferTime, setTransferTime] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [latestPayment, setLatestPayment] = useState<LatestPayment | null>(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -22,48 +36,44 @@ export default function Pricing() {
     }
   }, [currentUser]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
+  useEffect(() => {
+    if (!currentUser) return;
+    fetch('/api/payments/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        setLatestPayment(data?.payment ?? null);
+      })
+      .catch(() => {});
+  }, [currentUser]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
   };
 
-  // TODO(step 7): masih simulasi ke localStorage. Setelah payment_queue
-  // dimigrasikan ke Supabase, ini harus jadi POST ke Route Handler yang
-  // menyisipkan baris dengan user_id = currentUser.id, dan status di
-  // profiles hanya boleh berubah lewat approval admin di server, bukan dari sini.
-  const handleSubmitPayment = (e: React.FormEvent) => {
+  const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile || !currentUser) return;
+    if (!currentUser || !bank || !transferTime) return;
 
-    setIsUploading(true);
+    setIsSubmitting(true);
+    setFormError('');
 
-    // Simulate upload delay
-    setTimeout(() => {
-      // Update user status in localStorage
-      const user = JSON.parse(localStorage.getItem('mathspace_user') || '{}');
-      user.status = 'pending';
-      localStorage.setItem('mathspace_user', JSON.stringify(user));
-
-      // Add submission to payment queue
-      const queue = JSON.parse(localStorage.getItem('mathspace_queue') || '[]');
-      queue.push({
-        id: 'pay-' + Date.now(),
-        userId: currentUser.id,
-        name: currentUser.name,
-        role: currentUser.jurusan || 'Mahasiswa',
-        status: 'pending',
-        submittedAt: new Date().toISOString()
+    try {
+      const res = await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ senderName, bank, transferTime }),
       });
-      localStorage.setItem('mathspace_queue', JSON.stringify(queue));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Gagal mengirim permintaan.');
 
-      setIsUploading(false);
-      setSelectedFile(null);
-    }, 1500);
+      await refresh();
+      setBank('');
+      setTransferTime('');
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Gagal mengirim permintaan.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -201,7 +211,7 @@ export default function Pricing() {
                 <div className="space-y-2">
                   <h4 className="font-headline text-xl font-bold text-primary">Verifikasi Diproses</h4>
                   <p className="text-on-surface-variant text-sm leading-relaxed">
-                    Bukti pembayaran Anda telah dikirim. Admin akan melakukan verifikasi dalam waktu maksimal 1×24 jam.
+                    Permintaan pembayaran Anda telah dikirim. Admin akan melakukan verifikasi dalam waktu maksimal 1×24 jam.
                   </p>
                 </div>
               </div>
@@ -211,35 +221,40 @@ export default function Pricing() {
                 <h4 className="font-headline text-xl font-bold text-primary mb-6 flex items-center gap-2">
                   <CreditCard className="w-5 h-5" /> Pembayaran
                 </h4>
+
+                {latestPayment?.status === 'rejected' && (
+                  <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 flex gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-red-700">Permintaan sebelumnya ditolak</p>
+                      {latestPayment.reason && (
+                        <p className="text-xs text-red-600 mt-1">{latestPayment.reason}</p>
+                      )}
+                      <p className="text-xs text-red-600 mt-1">Silakan kirim ulang dengan data yang benar.</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-4 mb-8">
                   <p className="text-[10px] font-bold uppercase text-on-surface-variant tracking-widest">Detail Transfer Bank</p>
-                  
-                  <div className="bg-surface-container-lowest p-4 rounded-xl flex items-center justify-between group transition-all hover:bg-white border border-outline-variant/5">
-                    <div>
-                      <p className="text-[10px] text-on-surface-variant uppercase font-bold">BCA</p>
-                      <p className="text-sm font-mono font-bold text-primary">023-4455-991</p>
-                      <p className="text-[10px] text-on-surface-variant">Departemen Matematika ITS</p>
-                    </div>
-                    <button onClick={() => handleCopy('0234455991')} className="p-2 text-on-surface-variant hover:text-secondary transition-colors">
-                      <Copy className="w-4 h-4" />
-                    </button>
-                  </div>
 
-                  <div className="bg-surface-container-lowest p-4 rounded-xl flex items-center justify-between group transition-all hover:bg-white border border-outline-variant/5">
-                    <div>
-                      <p className="text-[10px] text-on-surface-variant uppercase font-bold">Mandiri</p>
-                      <p className="text-sm font-mono font-bold text-primary">121-00-1234567-8</p>
-                      <p className="text-[10px] text-on-surface-variant">Departemen Matematika ITS</p>
+                  {BANKS.map((b) => (
+                    <div key={b.id} className="bg-surface-container-lowest p-4 rounded-xl flex items-center justify-between group transition-all hover:bg-white border border-outline-variant/5">
+                      <div>
+                        <p className="text-[10px] text-on-surface-variant uppercase font-bold">{b.label}</p>
+                        <p className="text-sm font-mono font-bold text-primary">{b.account}</p>
+                        <p className="text-[10px] text-on-surface-variant">Departemen Matematika ITS</p>
+                      </div>
+                      <button onClick={() => handleCopy(b.accountRaw)} className="p-2 text-on-surface-variant hover:text-secondary transition-colors">
+                        <Copy className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button onClick={() => handleCopy('1210012345678')} className="p-2 text-on-surface-variant hover:text-secondary transition-colors">
-                      <Copy className="w-4 h-4" />
-                    </button>
-                  </div>
+                  ))}
                 </div>
 
                 <form onSubmit={handleSubmitPayment} className="space-y-4">
                   <p className="text-[10px] font-bold uppercase text-on-surface-variant tracking-widest">Verifikasi</p>
-                  
+
                   <div>
                     <label className="text-[10px] font-bold text-on-surface-variant uppercase mb-1 block">Nama Pengirim</label>
                     <input 
@@ -247,33 +262,48 @@ export default function Pricing() {
                       required
                       value={senderName}
                       onChange={(e) => setSenderName(e.target.value)}
-                      className="w-full px-4 py-2 bg-white border border-outline-variant/10 rounded-xl text-sm focus:ring-2 focus:ring-secondary/20 transition-all mb-3"
+                      className="w-full px-4 py-2 bg-white border border-outline-variant/10 rounded-xl text-sm focus:ring-2 focus:ring-secondary/20 transition-all"
                       placeholder="Nama sesuai rekening"
+                    />
+                    <p className="text-[10px] text-on-surface-variant mt-1">Isi persis seperti nama di struk transfer, terutama kalau ditransfer bukan atas nama sendiri.</p>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-on-surface-variant uppercase mb-1 block">Transfer ke Rekening</label>
+                    <select
+                      required
+                      value={bank}
+                      onChange={(e) => setBank(e.target.value as 'BCA' | 'Mandiri')}
+                      className="w-full px-4 py-2 bg-white border border-outline-variant/10 rounded-xl text-sm focus:ring-2 focus:ring-secondary/20 transition-all appearance-none"
+                    >
+                      <option value="">Pilih rekening tujuan...</option>
+                      {BANKS.map((b) => (
+                        <option key={b.id} value={b.id}>{b.label} — {b.account}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-on-surface-variant uppercase mb-1 block">Waktu Transfer</label>
+                    <input
+                      type="datetime-local"
+                      required
+                      value={transferTime}
+                      onChange={(e) => setTransferTime(e.target.value)}
+                      className="w-full px-4 py-2 bg-white border border-outline-variant/10 rounded-xl text-sm focus:ring-2 focus:ring-secondary/20 transition-all"
                     />
                   </div>
 
-                  <div className="relative group">
-                    <div className={`border-2 border-dashed rounded-2xl p-8 text-center bg-surface transition-all group-hover:bg-white group-hover:border-secondary ${selectedFile ? 'border-secondary' : 'border-outline-variant'}`}>
-                      <Upload className={`w-10 h-10 mx-auto mb-2 transition-colors ${selectedFile ? 'text-secondary' : 'text-on-surface-variant'}`} />
-                      <p className="text-xs text-on-surface-variant font-medium">
-                        {selectedFile ? selectedFile.name : 'Unggah Bukti Transfer'}
-                      </p>
-                      <p className="text-[10px] text-on-surface-variant mt-1">JPEG, PNG, atau PDF hingga 5MB</p>
-                      <input 
-                        className="absolute inset-0 opacity-0 cursor-pointer" 
-                        type="file" 
-                        onChange={handleFileChange}
-                        accept="image/*,.pdf"
-                        required
-                      />
-                    </div>
-                  </div>
+                  {formError && (
+                    <p className="text-xs font-bold text-red-600">{formError}</p>
+                  )}
+
                   <button 
                     type="submit"
-                    disabled={!selectedFile || isUploading}
+                    disabled={isSubmitting}
                     className="w-full py-4 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isUploading ? 'Mengirim...' : 'Kirim untuk Verifikasi'}
+                    {isSubmitting ? 'Mengirim...' : 'Kirim untuk Verifikasi'}
                     <ArrowRight className="w-4 h-4" />
                   </button>
                   <p className="text-[10px] text-center text-on-surface-variant px-4 italic leading-relaxed">
