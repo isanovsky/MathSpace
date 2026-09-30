@@ -258,7 +258,7 @@ function LibraryContent() {
               <div className="absolute inset-0 math-pattern opacity-10"></div>
               <div className="relative z-10">
                 <h2 className="text-3xl font-headline font-bold mb-2">
-                  {selectedSubfolder?.name || selectedFolder?.name || 'Perpustakaan Matematika'}
+                  {selectedSubfolder?.name || selectedFolder?.name || 'Perpustakaan Mata Kuliah'}
                 </h2>
                 <p className="text-on-primary-container text-sm max-w-md">
                   Akses pembahasan soal-soal, e-book, dan materi pendukung perkuliahanmu.
