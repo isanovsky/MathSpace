@@ -96,7 +96,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               className="text-5xl md:text-7xl font-headline font-bold tracking-tighter leading-tight"
             >
-              Kuasai Matematika dengan <br/>
+              Kuasai Mata Kuliah dengan <br/>
               <span className="text-secondary-fixed-dim">Pembahasan Soal-Soal.</span>
             </motion.h1>
 

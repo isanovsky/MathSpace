@@ -91,7 +91,7 @@ export default function LoginPage() {
           className="relative z-10 space-y-8"
         >
           <h1 className="text-5xl font-display font-bold leading-tight">
-            Platform Repositori Tutorial dan Pembahasan <br/> Matematika ITS.
+            Platform Repositori Tutorial dan Pembahasan <br/> Mata Kuliah.
           </h1>
           <p className="text-gray-400 text-lg max-w-md">
             Akses ratusan dokumen akademik, pembahasan soal, dan bantuan AI dalam satu platform terintegrasi.
