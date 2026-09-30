@@ -283,7 +283,7 @@ export default function Home() {
                 Tingkatkan belajarmu dengan <br/>materi eksklusif.
               </h2>
               <p className="text-secondary-fixed-dim text-lg font-medium leading-relaxed">
-                Dapatkan akses ke e-book eksklusif, spreadsheet, dan rangkuman materi hanya dengan <span className="text-white font-bold">Rp10rb/bulan</span>. Bergabunglah dengan 200+ mahasiswa yang menguasai matematika.
+                Dapatkan akses ke e-book eksklusif, spreadsheet, dan rangkuman materi hanya dengan <span className="text-white font-bold">Rp20rb Lifetime</span>. Bergabunglah dan tingkatkan kualitas belajarmu!
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
                 <button 

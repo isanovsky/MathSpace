@@ -140,7 +140,7 @@ export default function RegisterPage() {
             Bergabung dengan <br/> Komunitas MathSpace.
           </h1>
           <p className="text-gray-400 text-lg max-w-md">
-            Dapatkan akses penuh ke materi eksklusif dan tingkatkan pemahaman matematika kamu bersama ribuan mahasiswa ITS lainnya.
+            Dapatkan akses penuh ke materi eksklusif dan tingkatkan pemahaman materimu bersama mahasiswa lainnya.
           </p>
 
           <div className="grid grid-cols-1 gap-6 pt-8">
