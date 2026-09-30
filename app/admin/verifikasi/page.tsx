@@ -80,6 +80,7 @@ export default function VerificationPage() {
   const handleRejectClick = (id: string) => {
     setRejectingId(id);
     setShowRejectModal(true);
+    setSelectedItem(null);
   };
 
   const handleConfirmReject = async () => {

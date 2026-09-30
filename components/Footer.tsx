@@ -23,7 +23,7 @@ export default function Footer() {
             <li><Link href="/dashboard" className="text-sm text-on-surface-variant hover:text-secondary transition-colors">Dasbor Saya</Link></li>
             <li><Link href="/library" className="text-sm text-on-surface-variant hover:text-secondary transition-colors">Jelajahi Konten</Link></li>
             <li><Link href="/pricing" className="text-sm text-on-surface-variant hover:text-secondary transition-colors">Harga & Layanan</Link></li>
-            <li><Link href="/contact" className="text-sm text-on-surface-variant hover:text-secondary transition-colors">Kontak Fakultas</Link></li>
+            <li><Link href="/contact" className="text-sm text-on-surface-variant hover:text-secondary transition-colors">Kontak Developer</Link></li>
           </ul>
         </div>
 

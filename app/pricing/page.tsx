@@ -160,7 +160,7 @@ export default function Pricing() {
                   </ul>
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-3xl font-bold text-primary">Rp10rb<span className="text-sm font-normal text-on-surface-variant">/6 bulan</span></div>
+                  <div className="text-3xl font-bold text-primary">Rp20rb<span className="text-sm font-normal text-on-surface-variant">/lifetime</span></div>
                   <ShieldCheck className="w-6 h-6 text-secondary animate-pulse" />
                 </div>
               </motion.div>
