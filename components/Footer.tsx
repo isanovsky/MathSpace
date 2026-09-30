@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="space-y-4">
           <span className="text-xl font-bold tracking-tighter text-secondary font-headline">MathSpace</span>
           <p className="text-on-surface-variant text-sm leading-relaxed max-w-xs">
-            Advance Your Mathematical Knowledge.
+            Study Together, Success Together.
           </p>
           <div className="flex gap-4 pt-2">
             <Mail className="w-5 h-5 text-outline hover:text-primary cursor-pointer transition-colors" />
