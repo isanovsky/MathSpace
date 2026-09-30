@@ -23,7 +23,8 @@ export default function Pricing() {
   const router = useRouter();
   const { user: currentUser, refresh } = useAuth();
   const [senderName, setSenderName] = useState('');
-  const [proofUrl, setProofUrl] = useState('');
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const MAX_PROOF_BYTES = 200 * 1024; // 200KB — must match the server's limit
   const [bank, setBank] = useState<'BCA' | 'Mandiri' | ''>('');
   const [transferTime, setTransferTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,24 +54,34 @@ export default function Pricing() {
 
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser || !bank || !transferTime || !proofUrl) return;
+    if (!currentUser || !bank || !transferTime || !proofFile) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(proofFile.type)) {
+      setFormError('Format gambar harus JPEG, PNG, atau WebP.');
+      return;
+    }
+    if (proofFile.size > MAX_PROOF_BYTES) {
+      setFormError('Ukuran gambar maksimal 200KB.');
+      return;
+    }
 
     setIsSubmitting(true);
     setFormError('');
 
     try {
-      const res = await fetch('/api/payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senderName, bank, transferTime, proofUrl }),
-      });
+      const body = new FormData();
+      body.append('senderName', senderName);
+      body.append('bank', bank);
+      body.append('transferTime', transferTime);
+      body.append('proof', proofFile);
+
+      const res = await fetch('/api/payments', { method: 'POST', body });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Gagal mengirim permintaan.');
 
       await refresh();
       setBank('');
       setTransferTime('');
-      setProofUrl('');
+      setProofFile(null);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Gagal mengirim permintaan.');
     } finally {
@@ -297,17 +308,20 @@ export default function Pricing() {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold text-on-surface-variant uppercase mb-1 block">Link Bukti Transfer</label>
-                    <input
-                      type="url"
-                      required
-                      value={proofUrl}
-                      onChange={(e) => setProofUrl(e.target.value)}
-                      placeholder="https://drive.google.com/..."
-                      className="w-full px-4 py-2 bg-white border border-outline-variant/10 rounded-xl text-sm focus:ring-2 focus:ring-secondary/20 transition-all"
-                    />
+                    <label className="text-[10px] font-bold text-on-surface-variant uppercase mb-1 block">Foto Bukti Transfer</label>
+                    <label className={`flex items-center justify-center gap-2 w-full px-4 py-5 rounded-xl border-2 border-dashed cursor-pointer transition-all text-sm ${
+                      proofFile ? 'border-secondary bg-secondary/5 text-secondary' : 'border-outline-variant/30 bg-white text-on-surface-variant hover:border-secondary'
+                    }`}>
+                      {proofFile ? `${proofFile.name} (${(proofFile.size / 1024).toFixed(0)} KB)` : 'Klik untuk pilih foto, maks 200KB'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+                      />
+                    </label>
                     <p className="text-[10px] text-on-surface-variant mt-1">
-                      Unggah screenshot bukti transfer ke Google Drive, lalu ubah akses jadi &quot;Siapa saja yang memiliki link&quot; dan tempel link-nya di sini.
+                      Screenshot notifikasi transfer dari aplikasi bank/e-wallet kamu. Format JPEG, PNG, atau WebP, maksimal 200KB.
                     </p>
                   </div>
 

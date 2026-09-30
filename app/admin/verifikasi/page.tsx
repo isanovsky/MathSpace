@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   UserCheck, MoreVertical, Search,
-  CheckCircle2, XCircle, AlertCircle, X, ArrowUpRight
+  CheckCircle2, XCircle, AlertCircle, X
 } from 'lucide-react';
 
 interface PaymentItem {
@@ -14,7 +14,7 @@ interface PaymentItem {
   amount: number | null;
   sender_name: string | null;
   transfer_time: string | null;
-  proof_image_url: string | null;
+  hasProof: boolean;
   reason: string | null;
   created_at: string;
   profiles: { id: string; name: string; email: string; jurusan: string | null } | null;
@@ -30,6 +30,8 @@ export default function VerificationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [proofLoading, setProofLoading] = useState(false);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,
     message: '',
@@ -128,6 +130,30 @@ export default function VerificationPage() {
       item.profiles?.email?.toLowerCase().includes(q)
     );
   });
+
+  useEffect(() => {
+    if (!selectedItem?.hasProof) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setProofUrl(null);
+      return;
+    }
+    let active = true;
+    setProofLoading(true);
+    fetch(`/api/admin/payments/${selectedItem.id}/proof`)
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        if (active) setProofUrl(data.url);
+      })
+      .catch(() => {
+        if (active) setProofUrl(null);
+      })
+      .finally(() => {
+        if (active) setProofLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [selectedItem]);
 
   return (
     <main className="p-8">
@@ -294,18 +320,26 @@ export default function VerificationPage() {
                 </div>
 
                 <div className="space-y-6">
-                  {selectedItem.proof_image_url ? (
-                    <a
-                      href={selectedItem.proof_image_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-surface-container-low text-sm font-bold text-secondary hover:bg-secondary/10 transition-all"
-                    >
-                      Buka Link Bukti Transfer <ArrowUpRight className="w-4 h-4" />
-                    </a>
+                  {selectedItem.hasProof ? (
+                    proofLoading ? (
+                      <div className="w-full h-48 rounded-xl bg-surface-container-low flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-secondary"></div>
+                      </div>
+                    ) : proofUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL, not worth Next/Image's remote-pattern config for this
+                      <img
+                        src={proofUrl}
+                        alt="Bukti transfer"
+                        className="w-full max-h-64 object-contain rounded-xl border border-outline-variant/10 bg-surface-container-low"
+                      />
+                    ) : (
+                      <div className="p-3 rounded-xl bg-red-50 text-xs text-red-700 italic">
+                        Gagal memuat gambar bukti.
+                      </div>
+                    )
                   ) : (
                     <div className="p-3 rounded-xl bg-yellow-50 text-xs text-yellow-800 italic">
-                      User tidak menyertakan link bukti transfer.
+                      User tidak menyertakan bukti transfer.
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-4">
