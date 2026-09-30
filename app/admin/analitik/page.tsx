@@ -163,7 +163,7 @@ export default function AnalyticsPage() {
 
         {/* User Management Table */}
         <div className="bg-white rounded-2xl border border-outline-variant/10 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+          <div className="p-6 border-b border-outline-variant/10 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <h3 className="font-headline font-bold text-xl">Semua User Aktif</h3>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
@@ -172,7 +172,7 @@ export default function AnalyticsPage() {
                 placeholder="Cari nama atau email..."
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
-                className="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-lg text-sm focus:ring-2 focus:ring-secondary/20 w-64"
+                className="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-lg text-sm focus:ring-2 focus:ring-secondary/20 w-full sm:w-64"
               />
             </div>
           </div>
@@ -186,7 +186,8 @@ export default function AnalyticsPage() {
               {userSearch ? 'Tidak ada hasil yang cocok.' : 'Belum ada user.'}
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="bg-surface-container-low/50 text-on-surface-variant text-[10px] uppercase tracking-widest">
@@ -248,6 +249,57 @@ export default function AnalyticsPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile card view */}
+            <div className="md:hidden divide-y divide-outline-variant/10">
+              {filteredUsers.map((u) => (
+                <div key={u.id} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-primary text-sm">{u.name}</p>
+                      <p className="text-xs text-on-surface-variant">{u.email}</p>
+                      {u.role !== 'admin' && (
+                        <p className="text-xs text-on-surface-variant mt-1">
+                          Premium: {premiumDuration(u.premium_since)}
+                        </p>
+                      )}
+                    </div>
+                    {u.role === 'admin' ? (
+                      <span className="shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold bg-primary-container text-primary">Admin</span>
+                    ) : (
+                      <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                        u.status === 'premium' ? 'bg-secondary-container text-on-secondary-container' :
+                        u.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {u.status === 'premium' ? 'Premium' : u.status === 'pending' ? 'Pending' : 'Biasa'}
+                      </span>
+                    )}
+                  </div>
+                  {u.role === 'admin' ? (
+                    <p className="text-xs text-on-surface-variant italic">Dikelola lewat Supabase</p>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleToggleStatus(u)}
+                        disabled={busyId === u.id}
+                        className="flex-1 py-2 rounded-lg text-xs font-bold bg-secondary/10 text-secondary disabled:opacity-50"
+                      >
+                        {u.status === 'premium' ? 'Jadikan Biasa' : 'Jadikan Premium'}
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(u)}
+                        disabled={busyId === u.id}
+                        className="flex-1 py-2 rounded-lg text-xs font-bold bg-red-50 text-red-600 disabled:opacity-50"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            </>
           )}
         </div>
       </div>

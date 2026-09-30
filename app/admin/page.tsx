@@ -16,6 +16,7 @@ export default function ContentManagementPage() {
   const { folders, documents: contents, isLoading: catalogLoading, error: catalogError, refresh } = useCatalog();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [contentSearch, setContentSearch] = useState('');
+  const [showFolderPanel, setShowFolderPanel] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   
   const [showFolderModal, setShowFolderModal] = useState(false);
@@ -274,12 +275,18 @@ export default function ContentManagementPage() {
           {/* Left Panel: Folders */}
           <div className="col-span-12 lg:col-span-4 space-y-4">
             <div className="bg-white rounded-2xl border border-outline-variant/10 shadow-sm p-6">
-              <h3 className="font-headline font-bold text-xl mb-6 flex items-center gap-2">
-                <FolderIcon className="w-5 h-5 text-secondary" />
-                Folder Mata Kuliah
-              </h3>
+              <button
+                onClick={() => setShowFolderPanel(!showFolderPanel)}
+                className="w-full font-headline font-bold text-xl mb-6 flex items-center justify-between lg:pointer-events-none"
+              >
+                <span className="flex items-center gap-2">
+                  <FolderIcon className="w-5 h-5 text-secondary" />
+                  Folder Mata Kuliah
+                </span>
+                <ChevronDown className={`w-5 h-5 text-on-surface-variant transition-transform lg:hidden ${showFolderPanel ? 'rotate-180' : ''}`} />
+              </button>
               
-              <div className="space-y-1">
+              <div className={`space-y-1 ${showFolderPanel ? 'block' : 'hidden'} lg:block`}>
                 <button 
                   onClick={() => setSelectedFolderId(null)}
                   className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
@@ -395,7 +402,7 @@ export default function ContentManagementPage() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-surface-container-low/50 text-on-surface-variant text-[10px] uppercase tracking-widest">
@@ -473,6 +480,67 @@ export default function ContentManagementPage() {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile card view */}
+              <div className="md:hidden divide-y divide-outline-variant/10">
+                {filteredContents.map((doc) => {
+                  const subfolder = folders.find(f => f.id === doc.folderId && f.parentId !== null);
+                  return (
+                    <div key={doc.id} className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium text-primary text-sm">{doc.title}</p>
+                          <p className="text-xs text-on-surface-variant mt-0.5">
+                            {doc.type}{subfolder ? ` · ${subfolder.name}` : ''}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          doc.status === 'aktif' ? 'bg-secondary-container text-on-secondary-container' : 'bg-surface-container-high text-on-surface-variant'
+                        }`}>
+                          {doc.status.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        {doc.isPremium ? (
+                          <span className="flex items-center gap-1 text-xs font-bold text-secondary">
+                            <Lock className="w-3 h-3" /> Premium
+                          </span>
+                        ) : (
+                          <span className="text-xs text-on-surface-variant">Gratis</span>
+                        )}
+                        <div className="flex gap-1">
+                          {doc.status === 'aktif' && (
+                            <button 
+                              onClick={() => window.open(`/document/${doc.id}`, '_blank')}
+                              className="p-2 rounded-lg hover:bg-surface-container text-secondary transition-colors"
+                              title="Preview di Perpustakaan"
+                            >
+                              <Globe className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => handleToggleStatus(doc)}
+                            className="p-2 rounded-lg hover:bg-surface-container transition-colors"
+                            title={doc.status === 'aktif' ? 'Arsipkan' : 'Aktifkan'}
+                          >
+                            <Archive className="w-4 h-4 text-on-surface-variant" />
+                          </button>
+                          <button 
+                            onClick={() => setShowDeleteConfirm({ type: 'content', id: doc.id })}
+                            className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+                            title="Hapus"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {filteredContents.length === 0 && (
+                  <p className="p-12 text-center text-on-surface-variant italic text-sm">Tidak ada dokumen di folder ini.</p>
+                )}
               </div>
             </div>
           </div>

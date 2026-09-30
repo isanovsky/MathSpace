@@ -186,12 +186,12 @@ export default function VerificationPage() {
 
         {/* Table Container */}
         <div className="bg-white rounded-2xl border border-outline-variant/10 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+          <div className="p-6 border-b border-outline-variant/10 flex flex-col md:flex-row justify-between md:items-center gap-4">
             <h3 className="font-headline font-bold text-xl flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-secondary" />
               Daftar Permintaan Verifikasi
             </h3>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
                 <input
@@ -199,7 +199,7 @@ export default function VerificationPage() {
                   placeholder="Cari nama atau email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-lg text-sm focus:ring-2 focus:ring-secondary/20 w-64"
+                  className="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-lg text-sm focus:ring-2 focus:ring-secondary/20 w-full sm:w-64"
                 />
               </div>
               <button
@@ -220,7 +220,8 @@ export default function VerificationPage() {
               {searchQuery ? 'Tidak ada hasil yang cocok.' : 'Belum ada permintaan verifikasi.'}
             </p>
           ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-surface-container-low/50 text-on-surface-variant text-[10px] uppercase tracking-widest">
@@ -313,6 +314,64 @@ export default function VerificationPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile card view */}
+          <div className="md:hidden divide-y divide-outline-variant/10">
+            {filteredQueue.map((item) => (
+              <div key={item.id} className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-primary text-sm">{item.profiles?.name ?? '(akun tidak ditemukan)'}</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">
+                      {item.profiles?.jurusan || '-'} · {item.bank || '-'} · Rp {(item.amount ?? 0).toLocaleString('id-ID')}
+                    </p>
+                    <button
+                      onClick={() => setSelectedItem(item)}
+                      className="text-xs font-bold text-secondary hover:underline mt-1"
+                    >
+                      Lihat Detail
+                    </button>
+                  </div>
+                  <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                    item.status === 'approved' 
+                      ? 'bg-secondary-container text-on-secondary-container' 
+                      : item.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-red-100 text-red-800'
+                  }`}>
+                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                  </span>
+                </div>
+                {item.status === 'pending' ? (
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleApprove(item.id)}
+                      disabled={isSubmitting}
+                      className="flex-1 py-2 rounded-lg bg-secondary/10 text-secondary text-sm font-bold flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> Setujui
+                    </button>
+                    <button 
+                      onClick={() => handleRejectClick(item.id)}
+                      disabled={isSubmitting}
+                      className="flex-1 py-2 rounded-lg bg-red-50 text-red-600 text-sm font-bold flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      <XCircle className="w-4 h-4" /> Tolak
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleDeleteHistory(item.id)}
+                    disabled={isSubmitting}
+                    className="w-full py-2 rounded-lg bg-red-50 text-red-600 text-sm font-bold disabled:opacity-50"
+                  >
+                    Hapus Riwayat
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          </>
           )}
         </div>
 

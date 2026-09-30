@@ -17,6 +17,7 @@ function LibraryContent() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedSubfolderId, setSelectedSubfolderId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -123,9 +124,24 @@ function LibraryContent() {
       
       <div className="flex pt-16 min-h-screen">
         {/* Sidebar Filter */}
-        <aside className="fixed left-0 top-16 bottom-0 w-80 bg-surface-container-low border-r border-outline-variant/10 p-6 hidden lg:flex flex-col gap-8 overflow-y-auto">
+        {/* Mobile backdrop */}
+        {isFilterOpen && (
+          <div
+            onClick={() => setIsFilterOpen(false)}
+            className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+          />
+        )}
+
+        {/* Sidebar Filter — fixed drawer on mobile (toggled via translate-x), always visible from lg up */}
+        <aside className={`fixed top-16 bottom-0 left-0 z-40 w-80 max-w-[85vw] bg-surface-container-low border-r border-outline-variant/10 p-6 flex flex-col gap-8 overflow-y-auto transition-transform duration-300 lg:translate-x-0 ${isFilterOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="flex items-center justify-between lg:hidden">
+            <h2 className="text-teal-600 font-bold text-xs uppercase tracking-widest">Penjelajah Perpustakaan</h2>
+            <button onClick={() => setIsFilterOpen(false)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
           <div>
-            <h2 className="text-teal-600 font-bold text-xs uppercase tracking-widest mb-4">Library Exploration</h2>
+            <h2 className="text-teal-600 font-bold text-xs uppercase tracking-widest mb-4 hidden lg:block">Penjelajah Perpustakaan</h2>
             <div className="space-y-6">
               <div>
                 <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 flex items-center gap-2">
@@ -136,6 +152,7 @@ function LibraryContent() {
                     onClick={() => {
                       setSelectedFolderId(null);
                       setSelectedSubfolderId(null);
+                      setIsFilterOpen(false);
                     }}
                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between ${
                       !selectedFolderId ? 'bg-white text-primary font-bold shadow-sm border border-outline-variant/10' : 'text-on-surface-variant hover:bg-surface-container'
@@ -164,6 +181,7 @@ function LibraryContent() {
                             onClick={() => {
                               setSelectedFolderId(folder.id);
                               setSelectedSubfolderId(null);
+                              setIsFilterOpen(false);
                             }}
                             title={folder.name}
                             className={`flex-1 text-left px-2 py-2 rounded-lg text-sm transition-all flex items-center justify-between ${
@@ -189,6 +207,7 @@ function LibraryContent() {
                                   onClick={() => {
                                     setSelectedFolderId(folder.id);
                                     setSelectedSubfolderId(sub.id);
+                                    setIsFilterOpen(false);
                                   }}
                                   title={sub.name}
                                   className={`w-full text-left pl-8 pr-3 py-1.5 rounded-lg text-xs transition-all flex items-center justify-between ${
@@ -225,6 +244,18 @@ function LibraryContent() {
         {/* Main Content */}
         <main className="lg:ml-80 flex-1 p-8">
           <div className="max-w-6xl mx-auto space-y-8">
+            {/* Mobile filter trigger */}
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className="lg:hidden w-full flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-outline-variant/10 shadow-sm text-sm font-bold text-primary"
+            >
+              <span className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-secondary" />
+                {selectedSubfolder?.name || selectedFolder?.name || 'Semua Mata Kuliah'}
+              </span>
+              <ChevronRight className="w-4 h-4 text-on-surface-variant" />
+            </button>
+
             {/* Breadcrumbs */}
             {selectedFolderId && (
               <nav className="flex items-center gap-2 text-xs font-medium text-on-surface-variant">
@@ -258,7 +289,7 @@ function LibraryContent() {
               <div className="absolute inset-0 math-pattern opacity-10"></div>
               <div className="relative z-10">
                 <h2 className="text-3xl font-headline font-bold mb-2">
-                  {selectedSubfolder?.name || selectedFolder?.name || 'Perpustakaan Mata Kuliah'}
+                  {selectedSubfolder?.name || selectedFolder?.name || 'Perpustakaan Matematika'}
                 </h2>
                 <p className="text-on-primary-container text-sm max-w-md">
                   Akses pembahasan soal-soal, e-book, dan materi pendukung perkuliahanmu.
