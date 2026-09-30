@@ -135,13 +135,13 @@ function LibraryContent() {
         {/* Sidebar Filter — fixed drawer on mobile (toggled via translate-x), always visible from lg up */}
         <aside className={`fixed top-16 bottom-0 left-0 z-40 w-80 max-w-[85vw] bg-surface-container-low border-r border-outline-variant/10 p-6 flex flex-col gap-8 overflow-y-auto transition-transform duration-300 lg:translate-x-0 ${isFilterOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex items-center justify-between lg:hidden">
-            <h2 className="text-teal-600 font-bold text-xs uppercase tracking-widest">Penjelajah Perpustakaan</h2>
+            <h2 className="text-teal-600 font-bold text-xs uppercase tracking-widest">Library Exploration</h2>
             <button onClick={() => setIsFilterOpen(false)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>
           <div>
-            <h2 className="text-teal-600 font-bold text-xs uppercase tracking-widest mb-4 hidden lg:block">Penjelajah Perpustakaan</h2>
+            <h2 className="text-teal-600 font-bold text-xs uppercase tracking-widest mb-4 hidden lg:block">Library Exploration</h2>
             <div className="space-y-6">
               <div>
                 <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 flex items-center gap-2">
