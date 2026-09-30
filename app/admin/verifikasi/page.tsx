@@ -32,6 +32,7 @@ export default function VerificationPage() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [proofLoading, setProofLoading] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,
     message: '',
@@ -123,6 +124,22 @@ export default function VerificationPage() {
     }
   };
 
+  const handleBulkDeleteHistory = async () => {
+    setShowBulkDeleteConfirm(false);
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/admin/payments', { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Gagal menghapus riwayat.');
+      await loadQueue();
+      showToast(`${data.deleted} riwayat berhasil dihapus`);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Gagal menghapus riwayat.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const filteredQueue = queue.filter((item) => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
@@ -174,15 +191,23 @@ export default function VerificationPage() {
               <UserCheck className="w-5 h-5 text-secondary" />
               Daftar Permintaan Verifikasi
             </h3>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
-              <input
-                type="text"
-                placeholder="Cari nama atau email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-lg text-sm focus:ring-2 focus:ring-secondary/20 w-64"
-              />
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
+                <input
+                  type="text"
+                  placeholder="Cari nama atau email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-lg text-sm focus:ring-2 focus:ring-secondary/20 w-64"
+                />
+              </div>
+              <button
+                onClick={() => setShowBulkDeleteConfirm(true)}
+                className="px-4 py-1.5 rounded-lg text-sm font-bold text-red-600 border border-red-200 hover:bg-red-50 transition-colors whitespace-nowrap"
+              >
+                Hapus Semua Riwayat
+              </button>
             </div>
           </div>
 
@@ -454,6 +479,50 @@ export default function VerificationPage() {
                       {isSubmitting ? 'Memproses...' : 'Konfirmasi Tolak'}
                     </button>
                   </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Bulk Delete History Confirm Modal */}
+        <AnimatePresence>
+          {showBulkDeleteConfirm && (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 text-center"
+              >
+                <div className="w-14 h-14 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl font-headline font-bold text-primary mb-2">Hapus Semua Riwayat?</h3>
+                <p className="text-on-surface-variant text-sm mb-6">
+                  Semua permintaan yang sudah Disetujui atau Ditolak akan dihapus permanen, termasuk foto buktinya. Ini tidak bisa dibatalkan. Permintaan yang masih Pending tidak akan terpengaruh.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowBulkDeleteConfirm(false)}
+                    className="flex-1 py-3 rounded-xl text-sm font-bold text-on-surface-variant bg-surface-container hover:bg-surface-container-high transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={handleBulkDeleteHistory}
+                    disabled={isSubmitting}
+                    className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-all disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'Menghapus...' : 'Ya, Hapus Semua'}
+                  </button>
                 </div>
               </motion.div>
             </div>

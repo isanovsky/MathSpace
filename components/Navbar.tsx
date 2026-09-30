@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, User, Menu, X, LogOut, Settings, History, ChevronDown, LayoutDashboard } from 'lucide-react';
+import { Search, User, Menu, X, LogOut, Settings, History, ChevronDown, LayoutDashboard, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -14,6 +14,22 @@ export default function Navbar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    let active = true;
+    fetch('/api/admin/payments/pending-count')
+      .then((res) => (res.ok ? res.json() : { count: 0 }))
+      .then((data) => {
+        if (active) setPendingCount(data.count ?? 0);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [isAdmin]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -75,6 +91,48 @@ export default function Navbar() {
           >
             <Search className="w-5 h-5 text-on-surface-variant" />
           </Link>
+
+          {isAdmin && (
+            <div className="relative hidden sm:block">
+              <button
+                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                className="relative p-2 rounded-full hover:bg-surface-container transition-colors"
+                title="Notifikasi"
+              >
+                <Bell className="w-5 h-5 text-on-surface-variant" />
+                {pendingCount > 0 && (
+                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                )}
+              </button>
+              <AnimatePresence>
+                {isNotifOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setIsNotifOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-outline-variant/10 z-20 overflow-hidden"
+                    >
+                      <div className="p-4">
+                        {pendingCount > 0 ? (
+                          <Link
+                            href="/admin/verifikasi"
+                            onClick={() => setIsNotifOpen(false)}
+                            className="block text-sm text-primary hover:text-secondary transition-colors"
+                          >
+                            <span className="font-bold">{pendingCount}</span> pengguna menunggu verifikasi pembayaran
+                          </Link>
+                        ) : (
+                          <p className="text-sm text-on-surface-variant">Tidak ada permintaan verifikasi baru.</p>
+                        )}
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {authLoading ? (
             <div className="w-8 h-8 rounded-full bg-surface-container animate-pulse"></div>

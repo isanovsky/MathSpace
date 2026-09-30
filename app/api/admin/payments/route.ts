@@ -53,3 +53,44 @@ export async function GET() {
 
   return NextResponse.json({ queue });
 }
+
+// Deletes ALL resolved (approved/rejected) history in one shot, and their
+// proof images. Pending requests are never touched — they still need a
+// decision first. Irreversible: this is real financial history disappearing,
+// the client is expected to make the user confirm explicitly before calling.
+export async function DELETE() {
+  const auth = await requireAdmin();
+  if (auth.error) return auth.error;
+
+  const { data: resolved, error: fetchError } = await auth.admin
+    .from('payment_queue')
+    .select('id, proof_image_path')
+    .neq('status', 'pending');
+
+  if (fetchError) {
+    console.error('Failed to load resolved payments:', fetchError);
+    return NextResponse.json({ error: 'Gagal memuat riwayat.' }, { status: 500 });
+  }
+  if (!resolved || resolved.length === 0) {
+    return NextResponse.json({ deleted: 0 });
+  }
+
+  const proofPaths = resolved
+    .map((r) => r.proof_image_path)
+    .filter((p): p is string => !!p);
+  if (proofPaths.length > 0) {
+    await auth.admin.storage.from('payment-proofs').remove(proofPaths);
+  }
+
+  const { error: deleteError } = await auth.admin
+    .from('payment_queue')
+    .delete()
+    .neq('status', 'pending');
+
+  if (deleteError) {
+    console.error('Failed to delete payment history:', deleteError);
+    return NextResponse.json({ error: 'Gagal menghapus riwayat.' }, { status: 500 });
+  }
+
+  return NextResponse.json({ deleted: resolved.length });
+}
