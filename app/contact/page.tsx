@@ -3,10 +3,10 @@ import Footer from '@/components/Footer';
 import { Mail, Github, MessageCircle } from 'lucide-react';
 
 // TODO: ganti semua placeholder di bawah ini dengan info kamu sendiri.
-const DEVELOPER_NAME = 'Nama Developer';
-const DEVELOPER_EMAIL = 'developer@example.com';
-const DEVELOPER_GITHUB = 'https://github.com/username';
-const DEVELOPER_WHATSAPP = 'https://wa.me/62xxxxxxxxxx';
+const DEVELOPER_NAME = 'Ican Enterprise';
+const DEVELOPER_EMAIL = 'ichsanadstd@gmail.com';
+const DEVELOPER_GITHUB = 'https://github.com/isanovsky';
+const DEVELOPER_WHATSAPP = '';
 
 export default function ContactPage() {
   return (
