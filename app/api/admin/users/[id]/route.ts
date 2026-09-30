@@ -69,6 +69,21 @@ export async function DELETE(
     );
   }
 
+  // Deleting the auth user cascades the payment_queue rows away in the
+  // database, but it does NOT touch their proof images sitting in Storage —
+  // clean those up first or they become permanent orphans.
+  const { data: payments } = await auth.admin
+    .from('payment_queue')
+    .select('proof_image_path')
+    .eq('user_id', id);
+
+  const proofPaths = (payments ?? [])
+    .map((p) => p.proof_image_path)
+    .filter((p): p is string => !!p);
+  if (proofPaths.length > 0) {
+    await auth.admin.storage.from('payment-proofs').remove(proofPaths);
+  }
+
   const { error } = await auth.admin.auth.admin.deleteUser(id);
   if (error) {
     console.error('Failed to delete user:', error);

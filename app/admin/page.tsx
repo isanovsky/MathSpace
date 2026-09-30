@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  FileText, Upload, MoreVertical, Search,
+  FileText, Upload, Search,
   Folder as FolderIcon, FolderPlus, ChevronRight, ChevronDown,
   Plus, Edit, Trash2, Archive, CheckCircle2, AlertCircle, X,
   Lock, Globe
