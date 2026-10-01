@@ -12,9 +12,13 @@
 
   --color-primary: var(--color-navy);
   --color-primary-container: var(--color-navy-mid);
-  
+  --color-on-primary: #ffffff;
+
   --color-secondary: var(--color-teal);
   --color-secondary-fixed-dim: var(--color-teal-light);
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #CFF4F2;
+  --color-on-secondary-container: var(--color-teal);
 
   --color-surface: #F5F7FA;
   --color-surface-container: #E2E8F0;
