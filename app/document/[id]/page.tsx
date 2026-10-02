@@ -3,11 +3,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Search, Download, Share2, ChevronRight, 
-  Send, Sparkles, Bot, User, MessageSquare, 
-  Maximize2, ZoomIn, ZoomOut, RotateCcw, FileText, AlertCircle
+  Download, Share2, ChevronRight, 
+  Send, Sparkles, Bot, User, FileText
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import PdfViewer from '@/components/PdfViewer';
 import { useParams, useRouter } from 'next/navigation';
 import type { CatalogDocument } from '@/lib/types/catalog';
 import Link from 'next/link';
@@ -17,7 +17,8 @@ export default function DocumentView() {
   const params = useParams();
   const router = useRouter();
   const docId = params.id as string;
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, isAdmin, user } = useAuth();
+  const isAiAllowed = isAdmin || user?.status === 'premium';
   const [doc, setDoc] = useState<CatalogDocument | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
@@ -42,26 +43,7 @@ export default function DocumentView() {
     };
   }, [docId]);
 
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [fileError, setFileError] = useState('');
-
-  useEffect(() => {
-    if (!doc || !doc.hasFile) return;
-    let active = true;
-
-    fetch(`/api/documents/${docId}/file`)
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => {
-        if (active) setFileUrl(data.url);
-      })
-      .catch(() => {
-        if (active) setFileError('Gagal memuat file. Coba muat ulang halaman.');
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [doc, docId]);
+  const fileEndpoint = `/api/documents/${docId}/file`;
 
   const [messages, setMessages] = useState([
     { role: 'ai', content: `Halo! Saya asisten AI Anda untuk MathSpace. Saya telah memindai ${doc?.title || 'dokumen'}. Apa yang bisa saya bantu hari ini?` }
@@ -103,17 +85,29 @@ export default function DocumentView() {
     }
   };
 
-  const handleDownload = () => {
-    if (!fileUrl) {
-      alert(fileError || 'File belum siap diunduh.');
+  const handleDownload = async () => {
+    if (!doc?.hasFile) {
+      alert('File belum siap diunduh.');
       return;
     }
-    const link = document.createElement('a');
-    link.href = fileUrl;
-    link.download = `${doc?.title || 'document'}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const res = await fetch(fileEndpoint);
+      if (!res.ok) throw new Error('Gagal memuat file.');
+      const blob = await res.blob();
+
+      // A blob: URL only exists in this tab's memory — unlike a Supabase
+      // signed URL, it cannot be copied and reused in another browser/tab.
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `${doc?.title || 'document'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      alert('Gagal mengunduh file. Coba lagi.');
+    }
   };
 
   const handleShare = () => {
@@ -220,26 +214,34 @@ export default function DocumentView() {
                 <p className="text-on-surface-variant font-medium">Dokumen ini belum memiliki file.</p>
                 <p className="text-on-surface-variant text-sm">Hubungi admin untuk mengunggah file PDF-nya.</p>
               </div>
-            ) : fileError ? (
-              <div className="bg-white rounded-sm border border-outline-variant/10 shadow-2xl min-h-[500px] flex flex-col items-center justify-center text-center p-12 gap-3">
-                <AlertCircle className="w-12 h-12 text-red-400" />
-                <p className="text-on-surface-variant font-medium">{fileError}</p>
-              </div>
-            ) : !fileUrl ? (
-              <div className="bg-white rounded-sm border border-outline-variant/10 shadow-2xl min-h-[500px] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-secondary"></div>
-              </div>
             ) : (
-              <iframe
-                src={fileUrl}
-                title={doc.title}
-                className="w-full min-h-[1100px] rounded-sm border border-outline-variant/10 shadow-2xl bg-white"
-              />
+              <PdfViewer fileUrl={fileEndpoint} title={doc.title} />
             )}
           </div>
         </section>
 
-        {/* AI Chatbot Sidebar */}
+        {/* AI Chatbot Sidebar — premium/admin only */}
+        {!isAiAllowed ? (
+          <aside className="w-full md:w-96 bg-white border-l border-outline-variant/10 flex flex-col items-center justify-center text-center p-8 h-[calc(100vh-4rem)] sticky top-16 shadow-2xl gap-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-secondary to-primary rounded-2xl flex items-center justify-center shadow-lg">
+              <Sparkles className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h2 className="font-headline font-bold text-primary mb-1">Asisten AI Khusus Premium</h2>
+              <p className="text-sm text-on-surface-variant">
+                {isLoggedIn
+                  ? 'Upgrade ke premium untuk tanya jawab seputar isi dokumen ini dengan AI.'
+                  : 'Masuk dan upgrade ke premium untuk mengakses fitur ini.'}
+              </p>
+            </div>
+            <Link
+              href={isLoggedIn ? '/pricing' : '/login'}
+              className="bg-secondary text-white font-bold px-6 py-3 rounded-xl hover:opacity-90 transition-all text-sm"
+            >
+              {isLoggedIn ? 'Lihat Paket Premium' : 'Masuk'}
+            </Link>
+          </aside>
+        ) : (
         <aside className="w-full md:w-96 bg-white border-l border-outline-variant/10 flex flex-col h-[calc(100vh-4rem)] sticky top-16 shadow-2xl">
           <div className="p-6 border-b border-outline-variant/10 bg-surface-container-low/50">
             <div className="flex items-center gap-3 mb-1">
@@ -327,6 +329,7 @@ export default function DocumentView() {
             </div>
           </div>
         </aside>
+        )}
       </main>
     </div>
   );

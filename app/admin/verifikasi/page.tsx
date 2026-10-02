@@ -228,7 +228,6 @@ export default function VerificationPage() {
                   <th className="px-6 py-4 font-bold">Nama Akun</th>
                   <th className="px-6 py-4 font-bold">Jurusan</th>
                   <th className="px-6 py-4 font-bold">Bank</th>
-                  <th className="px-6 py-4 font-bold">Nominal</th>
                   <th className="px-6 py-4 font-bold">Status</th>
                   <th className="px-6 py-4 font-bold text-right">Aksi</th>
                 </tr>
@@ -249,7 +248,6 @@ export default function VerificationPage() {
                     </td>
                     <td className="px-6 py-5 text-on-surface-variant text-sm">{item.profiles?.jurusan || '-'}</td>
                     <td className="px-6 py-5 text-on-surface-variant text-sm">{item.bank || '-'}</td>
-                    <td className="px-6 py-5 text-on-surface-variant text-sm">Rp {(item.amount ?? 0).toLocaleString('id-ID')}</td>
                     <td className="px-6 py-5">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                         item.status === 'approved' 
@@ -323,7 +321,7 @@ export default function VerificationPage() {
                   <div className="min-w-0">
                     <p className="font-medium text-primary text-sm">{item.profiles?.name ?? '(akun tidak ditemukan)'}</p>
                     <p className="text-xs text-on-surface-variant mt-0.5">
-                      {item.profiles?.jurusan || '-'} · {item.bank || '-'} · Rp {(item.amount ?? 0).toLocaleString('id-ID')}
+                      {item.profiles?.jurusan || '-'} · {item.bank || '-'}
                     </p>
                     <button
                       onClick={() => setSelectedItem(item)}
@@ -437,19 +435,13 @@ export default function VerificationPage() {
                       <p className="text-sm font-bold text-primary">{selectedItem.bank || '-'}</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Nominal</p>
-                      <p className="text-sm font-bold text-secondary">Rp {(selectedItem.amount ?? 0).toLocaleString('id-ID')}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Waktu Transfer</p>
-                      <p className="text-sm font-bold text-primary">
-                        {selectedItem.transfer_time
-                          ? new Date(selectedItem.transfer_time).toLocaleString('id-ID')
-                          : '-'}
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Waktu Transfer</p>
+                    <p className="text-sm font-bold text-primary">
+                      {selectedItem.transfer_time
+                        ? new Date(selectedItem.transfer_time).toLocaleString('id-ID')
+                        : '-'}
+                    </p>
                   </div>
                   {selectedItem.status === 'rejected' && selectedItem.reason && (
                     <div>
