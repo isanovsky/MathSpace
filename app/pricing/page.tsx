@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { compressImageToLimit } from '@/lib/client/compressImage';
 
 interface LatestPayment {
   id: string;
@@ -24,6 +25,7 @@ export default function Pricing() {
   const { user: currentUser, refresh } = useAuth();
   const [senderName, setSenderName] = useState('');
   const [proofFile, setProofFile] = useState<File | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
   const MAX_PROOF_BYTES = 200 * 1024; // 200KB — must match the server's limit
   const [bank, setBank] = useState<'BCA' | 'Mandiri' | ''>('');
   const [transferTime, setTransferTime] = useState('');
@@ -50,6 +52,34 @@ export default function Pricing() {
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
+  };
+
+  const handleProofFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file name after an error
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setFormError('Format gambar harus JPEG, PNG, atau WebP.');
+      return;
+    }
+
+    setFormError('');
+    setIsCompressing(true);
+    try {
+      const compressed = await compressImageToLimit(file, MAX_PROOF_BYTES);
+      if (compressed.size > MAX_PROOF_BYTES) {
+        setFormError('Gambar masih terlalu besar setelah dikompres. Coba foto lain yang lebih sederhana.');
+        setProofFile(null);
+      } else {
+        setProofFile(compressed);
+      }
+    } catch {
+      setFormError('Gagal memproses gambar. Coba foto lain.');
+      setProofFile(null);
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
   const handleSubmitPayment = async (e: React.FormEvent) => {
@@ -160,7 +190,7 @@ export default function Pricing() {
                   </ul>
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-3xl font-bold text-primary">Rp20rb<span className="text-sm font-normal text-on-surface-variant">/lifetime</span></div>
+                  <div className="text-3xl font-bold text-primary">Rp10rb<span className="text-sm font-normal text-on-surface-variant">/6 bulan</span></div>
                   <ShieldCheck className="w-6 h-6 text-secondary animate-pulse" />
                 </div>
               </motion.div>
@@ -312,16 +342,21 @@ export default function Pricing() {
                     <label className={`flex items-center justify-center gap-2 w-full px-4 py-5 rounded-xl border-2 border-dashed cursor-pointer transition-all text-sm ${
                       proofFile ? 'border-secondary bg-secondary/5 text-secondary' : 'border-outline-variant/30 bg-white text-on-surface-variant hover:border-secondary'
                     }`}>
-                      {proofFile ? `${proofFile.name} (${(proofFile.size / 1024).toFixed(0)} KB)` : 'Klik untuk pilih foto, maks 200KB'}
+                      {isCompressing
+                        ? 'Mengompres gambar...'
+                        : proofFile
+                          ? `${proofFile.name} (${(proofFile.size / 1024).toFixed(0)} KB)`
+                          : 'Klik untuk pilih foto'}
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
                         className="hidden"
-                        onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+                        disabled={isCompressing}
+                        onChange={handleProofFileChange}
                       />
                     </label>
                     <p className="text-[10px] text-on-surface-variant mt-1">
-                      Screenshot notifikasi transfer dari aplikasi bank/e-wallet kamu. Format JPEG, PNG, atau WebP, maksimal 200KB.
+                      Screenshot notifikasi transfer dari aplikasi bank/e-wallet kamu. Format JPEG, PNG, atau WebP — otomatis dikompres kalau ukurannya besar.
                     </p>
                   </div>
 
@@ -331,7 +366,7 @@ export default function Pricing() {
 
                   <button 
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isCompressing}
                     className="w-full py-4 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? 'Mengirim...' : 'Kirim untuk Verifikasi'}

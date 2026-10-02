@@ -3,10 +3,13 @@ import { getCurrentProfile } from '@/lib/auth/getCurrentProfile';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { canAccessDocument } from '@/lib/data/access';
 
-// Returns a short-lived signed URL to the PDF — never the storage path
-// itself, and never through the publishable key. This is the real gate:
-// /api/documents/[id] only tells the browser WHETHER it may open the file,
-// this route is what actually hands over something that can read it.
+// Streams the actual PDF bytes back, authenticated on every request — this
+// deliberately replaces the old signed-URL approach. A signed URL, once
+// handed to the browser, is a bearer link: anyone who copies it (from
+// DevTools, a mobile "Open" fallback card, etc.) can reuse it elsewhere
+// until it expires, regardless of their own login state. Returning the
+// bytes directly means there is never a separate link to copy in the first
+// place — only an authenticated request gets the file.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -17,7 +20,7 @@ export async function GET(
 
   const { data: doc, error } = await admin
     .from('documents')
-    .select('is_premium, status, file_path')
+    .select('is_premium, status, file_path, title')
     .eq('id', id)
     .maybeSingle();
 
@@ -31,14 +34,25 @@ export async function GET(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { data: signed, error: signError } = await admin.storage
+  const { data: fileBlob, error: downloadError } = await admin.storage
     .from('documents')
-    .createSignedUrl(doc.file_path, 60);
+    .download(doc.file_path);
 
-  if (signError || !signed) {
-    console.error('Failed to sign file URL:', signError);
-    return NextResponse.json({ error: 'Gagal membuat link file.' }, { status: 500 });
+  if (downloadError || !fileBlob) {
+    console.error('Failed to download document file:', downloadError);
+    return NextResponse.json({ error: 'Gagal memuat file.' }, { status: 500 });
   }
 
-  return NextResponse.json({ url: signed.signedUrl });
+  const arrayBuffer = await fileBlob.arrayBuffer();
+  const safeTitle = doc.title.replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'dokumen';
+
+  return new NextResponse(arrayBuffer, {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="${safeTitle}.pdf"`,
+      // Never cached by shared/proxy caches — this response is
+      // access-controlled per request, not a public asset.
+      'Cache-Control': 'private, no-store',
+    },
+  });
 }
