@@ -5,7 +5,7 @@ import { Mail, Github, MessageCircle } from 'lucide-react';
 // TODO: ganti semua placeholder di bawah ini dengan info kamu sendiri.
 const DEVELOPER_NAME = 'Ican Enterprise';
 const DEVELOPER_EMAIL = 'ichsanadstd@gmail.com';
-const DEVELOPER_GITHUB = 'https://github.com/isanovsky';
+const DEVELOPER_GITHUB = '';
 const DEVELOPER_WHATSAPP = '';
 
 export default function ContactPage() {
