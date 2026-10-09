@@ -36,7 +36,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-surface">
       <Navbar />
 
-      <main className="pt-24 pb-16 px-8">
+      <main className="pt-24 pb-16 px-4 sm:px-8">
         <div className="max-w-3xl mx-auto space-y-12">
           {/* Welcome Header */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">

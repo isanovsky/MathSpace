@@ -56,7 +56,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 w-full z-50 glass-nav h-16 px-8 flex items-center justify-between">
+      <nav className="fixed top-0 w-full z-50 glass-nav h-16 px-4 sm:px-8 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/" className="text-2xl font-bold tracking-tighter text-primary font-display">
             Math<span className="text-teal">Space</span>

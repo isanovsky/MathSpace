@@ -29,7 +29,7 @@ export default function TermsPage() {
     <div className="min-h-screen bg-surface flex flex-col">
       <Navbar />
 
-      <main className="flex-1 pt-32 pb-20 px-8">
+      <main className="flex-1 pt-32 pb-20 px-4 sm:px-8">
         <div className="max-w-3xl mx-auto space-y-10">
           <div>
             <h1 className="font-headline font-bold text-primary text-4xl lg:text-5xl leading-tight tracking-tighter mb-4">
