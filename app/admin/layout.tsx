@@ -48,7 +48,7 @@ export default function AdminLayout({
       
       <div className="flex pt-16 min-h-screen">
         {/* Sidebar */}
-        <aside className="fixed left-0 top-16 bottom-0 w-64 bg-surface-container-low border-r border-outline-variant/10 flex flex-col p-4 z-40">
+        <aside className="hidden md:flex fixed left-0 top-16 bottom-0 w-64 bg-surface-container-low border-r border-outline-variant/10 flex-col p-4 z-40">
           <div className="mb-8 px-2">
             <h2 className="font-headline font-bold text-primary text-lg">Administrator Dashboard</h2>
             <p className="text-on-surface-variant text-xs">Platform Management</p>
@@ -84,12 +84,34 @@ export default function AdminLayout({
         </aside>
 
         {/* Main Content Area */}
-        <div className="ml-64 flex-1">
+        <div className="md:ml-64 flex-1 min-w-0">
+          {/* Mobile menu (sidebar is hidden below md) */}
+          <nav className="md:hidden flex gap-2 overflow-x-auto px-4 pt-4">
+            {menuItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap ${
+                    isActive
+                      ? 'text-primary font-semibold bg-white shadow-sm'
+                      : 'text-on-surface-variant bg-surface-container-low'
+                  }`}
+                >
+                  <item.icon className={`w-4 h-4 ${isActive ? 'text-secondary' : ''}`} />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
           {children}
         </div>
       </div>
 
-      <Footer />
+      <div className="md:ml-64">
+        <Footer />
+      </div>
     </div>
   );
 }

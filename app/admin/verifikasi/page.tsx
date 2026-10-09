@@ -174,11 +174,11 @@ export default function VerificationPage() {
   }, [selectedItem]);
 
   return (
-    <main className="p-8">
+    <main className="p-4 sm:p-8">
       <div className="max-w-7xl mx-auto space-y-12">
         {/* Header */}
         <div className="max-w-2xl">
-          <h1 className="font-headline font-bold text-primary text-4xl lg:text-5xl leading-tight tracking-tighter mb-4">
+          <h1 className="font-headline font-bold text-primary text-3xl sm:text-4xl lg:text-5xl leading-tight tracking-tighter mb-4">
             Verifikasi <span className="text-secondary italic">Pengguna</span>
           </h1>
           <p className="text-on-surface-variant text-lg">Manage user verification requests and premium access.</p>

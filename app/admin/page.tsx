@@ -243,17 +243,17 @@ export default function ContentManagementPage() {
   }
 
   return (
-    <main className="p-8">
+    <main className="p-4 sm:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+        <div className="flex flex-col md:flex-row justify-between md:items-end gap-6">
           <div className="max-w-2xl">
-            <h1 className="font-headline font-bold text-primary text-4xl lg:text-5xl leading-tight tracking-tighter mb-2">
+            <h1 className="font-headline font-bold text-primary text-3xl sm:text-4xl lg:text-5xl leading-tight tracking-tighter mb-2">
               Kelola <span className="text-secondary italic">Konten</span>
             </h1>
             <p className="text-on-surface-variant text-lg">Atur dokumen dan folder mata kuliah</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <button 
               onClick={() => setShowFolderModal(true)}
               className="px-6 py-2.5 rounded-xl font-bold text-primary border-2 border-primary hover:bg-primary/5 transition-all flex items-center gap-2"
@@ -385,19 +385,19 @@ export default function ContentManagementPage() {
           {/* Right Panel: Documents */}
           <div className="col-span-12 lg:col-span-8 space-y-4">
             <div className="bg-white rounded-2xl border border-outline-variant/10 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+              <div className="p-4 sm:p-6 border-b border-outline-variant/10 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                 <h3 className="font-headline font-bold text-xl flex items-center gap-2">
                   <FileText className="w-5 h-5 text-secondary" />
                   {selectedFolderId ? folders.find(f => f.id === selectedFolderId)?.name : 'Semua Dokumen'}
                 </h3>
-                <div className="relative">
+                <div className="relative w-full sm:w-auto">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
                   <input 
                     type="text" 
                     placeholder="Cari dokumen..." 
                     value={contentSearch}
                     onChange={(e) => setContentSearch(e.target.value)}
-                    className="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-lg text-sm focus:ring-2 focus:ring-secondary/20 w-64"
+                    className="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-lg text-sm focus:ring-2 focus:ring-secondary/20 w-full sm:w-64"
                   />
                 </div>
               </div>

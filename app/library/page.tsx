@@ -242,7 +242,7 @@ function LibraryContent() {
         </aside>
 
         {/* Main Content */}
-        <main className="lg:ml-80 flex-1 p-8">
+        <main className="lg:ml-80 flex-1 min-w-0 p-4 sm:p-8">
           <div className="max-w-6xl mx-auto space-y-8">
             {/* Mobile filter trigger */}
             <button
@@ -285,7 +285,7 @@ function LibraryContent() {
             )}
 
             {/* Header Section */}
-            <section className="relative py-10 px-10 rounded-3xl overflow-hidden bg-primary text-white shadow-xl">
+            <section className="relative py-8 px-6 sm:py-10 sm:px-10 rounded-3xl overflow-hidden bg-primary text-white shadow-xl">
               <div className="absolute inset-0 math-pattern opacity-10"></div>
               <div className="relative z-10">
                 <h2 className="text-3xl font-headline font-bold mb-2">
@@ -530,7 +530,9 @@ function LibraryContent() {
         )}
       </AnimatePresence>
 
-      <Footer />
+      <div className="lg:ml-80">
+        <Footer />
+      </div>
     </div>
   );
 }
